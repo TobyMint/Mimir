@@ -123,9 +123,11 @@ def main() -> int:
             },
         }
         summary["per_workload"].append(row)
+        bf_ttft = f"{rb.ttft_ms:.1f}" if rb.ttft_ms is not None else "ERR"
+        fp_ttft = f"{rf.ttft_ms:.1f}" if rf.ttft_ms is not None else "ERR"
         print(
-            f"  [{wl}] bf16 TTFT={rb.ttft_ms:.1f}ms ok={rb.task_success} | "
-            f"fp8 TTFT={rf.ttft_ms:.1f}ms ok={rf.task_success}",
+            f"  [{wl}] bf16 TTFT={bf_ttft}ms ok={rb.task_success} | "
+            f"fp8 TTFT={fp_ttft}ms ok={rf.task_success}",
             flush=True,
         )
 
