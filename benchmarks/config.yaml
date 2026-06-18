@@ -1,0 +1,43 @@
+# Mimir Benchmark 配置（脚手架）
+#
+# 实际接入推理后端后填充。优化前后须使用相同硬件配置与模型。
+
+models:
+  - name: MiniCPM3-4B
+    path: null                  # TODO: 填写本地模型路径
+    source: https://www.modelscope.cn/models/OpenBMB/MiniCPM3-4B
+  - name: Qwen2.5-1.5B
+    path: null
+  - name: Qwen2.5-7B
+    path: null
+
+backend: vllm                   # vllm | llamacpp
+device: cuda                    # cuda | dtk | cann | cpu
+
+hardware:
+  # 优化前后保持一致；仅在报告时如实记录
+  os: openEuler                 # openEuler | openKylin | ubuntu | ...
+  gpu: null                     # TODO
+
+workloads:
+  multi_turn:
+    num_turns: 20
+    features: [prefix_cache, lifecycle]
+  tool_call:
+    num_tools: 5
+    num_calls: 12
+    features: [tool_offload, context_compress]
+  multi_stage:
+    num_branches: 4
+    depth: 5
+    features: [branch_cow, prefix_cache]
+
+metrics:
+  - peak_gpu_memory_gb
+  - ttft_ms
+  - e2e_latency_s
+  - throughput_tok_per_s
+  - task_success_rate
+
+output_dir: benchmark_results
+seed: 42
