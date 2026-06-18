@@ -90,3 +90,8 @@ logs/
 benchmark_results/**/*.bin
 benchmark_results/**/*.npy
 benchmark_results/**/*.pt
+
+# ---- vLLM editable-install prebuilt binaries (symlinked into submodule) ----
+third_party/vllm_prebuilt_bin/
+third_party/vllm/vllm/*.so
+third_party/vllm/vllm/vllm_flash_attn/*.so
