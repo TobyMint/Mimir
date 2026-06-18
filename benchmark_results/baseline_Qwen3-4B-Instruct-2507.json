@@ -1,0 +1,181 @@
+[
+  {
+    "label": "baseline_Qwen3-4B-Instruct-2507",
+    "peak_gpu_mem_alloc_gib": 11.530981063842773,
+    "peak_gpu_mem_reserved_gib": 11.6484375,
+    "ttft_ms": 46.274423599243164,
+    "e2e_latency_s": 12.764188676141202,
+    "throughput_tok_per_s": 60.168336545787994,
+    "task_success": true,
+    "extra": {
+      "workload": "multi_turn",
+      "num_requests": 8,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 1744,
+      "total_prefill_new_tokens": 398,
+      "first_ttft_ms": 46.274423599243164,
+      "avg_ttft_ms": 31.105130910873413,
+      "per_request": [
+        {
+          "label": "turn_0",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 0,
+          "ttft_ms": 46.274423599243164,
+          "req_e2e_s": 1.5235481262207031
+        },
+        {
+          "label": "turn_1",
+          "num_prompt_tokens": 221,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 192,
+          "ttft_ms": 29.35004234313965,
+          "req_e2e_s": 1.5233087539672852
+        },
+        {
+          "label": "turn_2",
+          "num_prompt_tokens": 237,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 208,
+          "ttft_ms": 27.954816818237305,
+          "req_e2e_s": 1.507066249847412
+        },
+        {
+          "label": "turn_3",
+          "num_prompt_tokens": 263,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 224,
+          "ttft_ms": 27.507781982421875,
+          "req_e2e_s": 1.5219647884368896
+        },
+        {
+          "label": "turn_4",
+          "num_prompt_tokens": 279,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 256,
+          "ttft_ms": 27.96483039855957,
+          "req_e2e_s": 1.502774953842163
+        },
+        {
+          "label": "turn_5",
+          "num_prompt_tokens": 295,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 272,
+          "ttft_ms": 26.810407638549805,
+          "req_e2e_s": 1.5340254306793213
+        },
+        {
+          "label": "turn_6",
+          "num_prompt_tokens": 313,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 288,
+          "ttft_ms": 28.147220611572266,
+          "req_e2e_s": 1.5103988647460938
+        },
+        {
+          "label": "turn_7",
+          "num_prompt_tokens": 332,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 304,
+          "ttft_ms": 34.83152389526367,
+          "req_e2e_s": 1.5357723236083984
+        }
+      ],
+      "engine_init_s": 46.044201088137925
+    }
+  },
+  {
+    "label": "baseline_Qwen3-4B-Instruct-2507",
+    "peak_gpu_mem_alloc_gib": 11.656823635101318,
+    "peak_gpu_mem_reserved_gib": 11.931640625,
+    "ttft_ms": 309.476375579834,
+    "e2e_latency_s": 2.499986233189702,
+    "throughput_tok_per_s": 45.20024890530084,
+    "task_success": false,
+    "extra": {
+      "error": "The decoder prompt (length 5862) is longer than the maximum model length of 4096. Make sure that `max_model_len` is no smaller than the number of text tokens.",
+      "workload": "tool_call",
+      "num_requests": 6,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 2256,
+      "total_prefill_new_tokens": 3792,
+      "first_ttft_ms": 309.476375579834,
+      "avg_ttft_ms": 328.39906215667725,
+      "per_request": [
+        {
+          "label": "turn_0",
+          "num_prompt_tokens": 2077,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 192,
+          "ttft_ms": 309.476375579834,
+          "req_e2e_s": 1.8214828968048096
+        },
+        {
+          "label": "turn_1",
+          "num_prompt_tokens": 3971,
+          "num_output_tokens": 17,
+          "num_cached_tokens": 2064,
+          "ttft_ms": 347.3217487335205,
+          "req_e2e_s": 0.6178255081176758
+        }
+      ],
+      "engine_init_s": 46.044201088137925
+    }
+  },
+  {
+    "label": "baseline_Qwen3-4B-Instruct-2507",
+    "peak_gpu_mem_alloc_gib": 11.518740177154541,
+    "peak_gpu_mem_reserved_gib": 11.931640625,
+    "ttft_ms": 28.007984161376953,
+    "e2e_latency_s": 6.343837209045887,
+    "throughput_tok_per_s": 60.53118756774555,
+    "task_success": true,
+    "extra": {
+      "workload": "multi_stage",
+      "num_requests": 4,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 768,
+      "total_prefill_new_tokens": 40,
+      "first_ttft_ms": 28.007984161376953,
+      "avg_ttft_ms": 27.90313959121704,
+      "per_request": [
+        {
+          "label": "branch_0",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 192,
+          "ttft_ms": 28.007984161376953,
+          "req_e2e_s": 1.563584327697754
+        },
+        {
+          "label": "branch_1",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 192,
+          "ttft_ms": 27.883291244506836,
+          "req_e2e_s": 1.5671939849853516
+        },
+        {
+          "label": "branch_2",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 192,
+          "ttft_ms": 28.57518196105957,
+          "req_e2e_s": 1.5743510723114014
+        },
+        {
+          "label": "branch_3",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 96,
+          "num_cached_tokens": 192,
+          "ttft_ms": 27.146100997924805,
+          "req_e2e_s": 1.5767810344696045
+        }
+      ],
+      "engine_init_s": 46.044201088137925
+    }
+  }
+]

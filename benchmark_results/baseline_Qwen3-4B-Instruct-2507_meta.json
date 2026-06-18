@@ -1,0 +1,45 @@
+{
+  "model": "/data/models/Qwen3-4B-Instruct-2507",
+  "gpu_memory_utilization": 0.55,
+  "max_tokens": 96,
+  "engine_init_s": 46.044201088137925,
+  "vllm": "0.10.2",
+  "torch": "2.8.0+cu128",
+  "gpu_snapshot": {
+    "gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA GeForce RTX 3090",
+        "mem_total_mib": 24576,
+        "mem_used_mib": 14723,
+        "mem_free_mib": 9413,
+        "gpu_util": 70
+      },
+      {
+        "index": 1,
+        "name": "NVIDIA GeForce RTX 3090",
+        "mem_total_mib": 24576,
+        "mem_used_mib": 4873,
+        "mem_free_mib": 19263,
+        "gpu_util": 39
+      },
+      {
+        "index": 2,
+        "name": "NVIDIA GeForce RTX 3090",
+        "mem_total_mib": 24576,
+        "mem_used_mib": 17527,
+        "mem_free_mib": 6609,
+        "gpu_util": 98
+      },
+      {
+        "index": 3,
+        "name": "NVIDIA GeForce RTX 3090",
+        "mem_total_mib": 24576,
+        "mem_used_mib": 4883,
+        "mem_free_mib": 19253,
+        "gpu_util": 43
+      }
+    ],
+    "cuda_visible_devices": "2"
+  }
+}
