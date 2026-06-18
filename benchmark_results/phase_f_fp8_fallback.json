@@ -1,0 +1,13 @@
+{
+  "phase": "F",
+  "date": "2026-06-19",
+  "model": "Qwen3-4B-Instruct-2507",
+  "engine": "vLLM 0.10.2 (v1, InprocClient, Mimir-patched)",
+  "request_kv_cache_dtype": "fp8",
+  "device": "RTX 3090 (compute 8.6, no Hopper fp8)",
+  "result": "FP8_OK with fallback",
+  "behavior": "v1 oracle detects fp8 unsupported on RTX 3090; Mimir patch warns + falls back to bf16 (auto) KV; task continues and generates correctly.",
+  "pre_patch": "NotImplementedError: VLLM_USE_V1=1 is not supported with --kv-cache-dtype (task killed)",
+  "post_patch": "warning logged, kv_cache_dtype=auto, generation succeeds, total_blocks=1780",
+  "value": "preserves task success rate on unsupported hardware (graceful degradation instead of crash)"
+}
