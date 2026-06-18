@@ -51,6 +51,7 @@ class EngineConfig:
     tensor_parallel_size: int = 1
     seed: int = 42
     use_v1: bool = False  # 默认 v0 单进程，便于父进程度量显存/块
+    kv_cache_dtype: str | None = None  # None=bf16, "fp8" 量化 KV（显存减半）
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -171,6 +172,8 @@ class VLLMEngine:
             "tensor_parallel_size": c.tensor_parallel_size,
             "seed": c.seed,
         }
+        if c.kv_cache_dtype:
+            kwargs["kv_cache_dtype"] = c.kv_cache_dtype
         kwargs.update(c.extra)
         t0 = time.perf_counter()
         self._llm = LLM(**kwargs)
