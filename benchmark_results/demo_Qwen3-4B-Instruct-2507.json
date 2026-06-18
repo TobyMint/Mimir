@@ -1,0 +1,136 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "turns": 10,
+  "baseline": {
+    "history": [
+      {
+        "turn": 1,
+        "new_prefill": 202,
+        "ttft_ms": 48.14910888671875,
+        "ok": true
+      },
+      {
+        "turn": 2,
+        "new_prefill": 29,
+        "ttft_ms": 31.405925750732422,
+        "ok": true
+      },
+      {
+        "turn": 3,
+        "new_prefill": 29,
+        "ttft_ms": 28.278350830078125,
+        "ok": true
+      },
+      {
+        "turn": 4,
+        "new_prefill": 39,
+        "ttft_ms": 30.236482620239258,
+        "ok": true
+      },
+      {
+        "turn": 5,
+        "new_prefill": 23,
+        "ttft_ms": 29.169082641601562,
+        "ok": true
+      },
+      {
+        "turn": 6,
+        "new_prefill": 23,
+        "ttft_ms": 27.21428871154785,
+        "ok": true
+      },
+      {
+        "turn": 7,
+        "new_prefill": 25,
+        "ttft_ms": 30.072927474975586,
+        "ok": true
+      },
+      {
+        "turn": 8,
+        "new_prefill": 28,
+        "ttft_ms": 28.904438018798828,
+        "ok": true
+      },
+      {
+        "turn": 9,
+        "new_prefill": 31,
+        "ttft_ms": 29.918193817138672,
+        "ok": true
+      },
+      {
+        "turn": 10,
+        "new_prefill": 34,
+        "ttft_ms": 31.816482543945312,
+        "ok": true
+      }
+    ],
+    "oom_turn": null
+  },
+  "mimir": {
+    "history": [
+      {
+        "turn": 1,
+        "new_prefill": 10,
+        "ttft_ms": 28.649091720581055,
+        "ok": true
+      },
+      {
+        "turn": 2,
+        "new_prefill": 13,
+        "ttft_ms": 29.637575149536133,
+        "ok": true
+      },
+      {
+        "turn": 3,
+        "new_prefill": 13,
+        "ttft_ms": 28.295278549194336,
+        "ok": true
+      },
+      {
+        "turn": 4,
+        "new_prefill": 7,
+        "ttft_ms": 28.60236167907715,
+        "ok": true
+      },
+      {
+        "turn": 5,
+        "new_prefill": 7,
+        "ttft_ms": 29.450654983520508,
+        "ok": true
+      },
+      {
+        "turn": 6,
+        "new_prefill": 7,
+        "ttft_ms": 28.261899948120117,
+        "ok": true
+      },
+      {
+        "turn": 7,
+        "new_prefill": 9,
+        "ttft_ms": 28.742313385009766,
+        "ok": true
+      },
+      {
+        "turn": 8,
+        "new_prefill": 12,
+        "ttft_ms": 29.091358184814453,
+        "ok": true
+      },
+      {
+        "turn": 9,
+        "new_prefill": 15,
+        "ttft_ms": 34.29985046386719,
+        "ok": true
+      },
+      {
+        "turn": 10,
+        "new_prefill": 2,
+        "ttft_ms": 28.306961059570312,
+        "ok": true
+      }
+    ],
+    "oom_turn": null
+  },
+  "baseline_final_new_prefill": 34,
+  "mimir_final_new_prefill": 2
+}
