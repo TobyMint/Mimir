@@ -1,0 +1,10 @@
+# Mimir 核心依赖清单（与 pyproject.toml 保持一致）
+#
+# 安装：  pip install -r requirements.txt
+# 开发：  pip install -r requirements-dev.txt（或 pip install -e ".[dev]"）
+#
+# 注意：vLLM / llama.cpp 等重型推理框架体积较大，按需通过 extras 安装：
+#   pip install -e ".[vllm,agent,dev]"
+
+numpy>=1.23
+pydantic>=2.0

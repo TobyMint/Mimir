@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mimir"
+version = "0.1.0"
+description = "面向智能体推理过程的内存管理系统 (Memory Management System for Agent Inference)"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+authors = [
+    { name = "TobyMint" },
+]
+keywords = [
+    "llm",
+    "agent",
+    "kv-cache",
+    "memory-management",
+    "vllm",
+    "inference",
+    "context-compression",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# 核心依赖（保持精简，重型推理框架如 vLLM 通过 extras 安装）
+dependencies = [
+    "numpy>=1.23",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+# 推理后端
+vllm = ["vllm"]
+llamacpp = ["llama-cpp-python"]
+
+# 智能体工作流
+agent = [
+    "langchain>=0.1",
+    "langchain-core>=0.1",
+]
+
+# 开发工具链
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-benchmark>=4.0",
+    "ruff>=0.4",
+    "mypy>=1.8",
+    "pre-commit>=3.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/TobyMint/Mimir"
+Repository = "https://github.com/TobyMint/Mimir"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q --strict-markers"
+markers = [
+    "slow: 标记为慢速测试（需要模型权重或 GPU）",
+    "gpu: 需要 GPU 的测试",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B", "C4"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mimir"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = false
+ignore_missing_imports = true
+files = ["src/mimir"]
