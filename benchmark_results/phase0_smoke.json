@@ -1,0 +1,16 @@
+{
+  "phase": 0,
+  "date": "2026-06-18",
+  "model": "/data/models/Qwen3-4B-Instruct-2507",
+  "backend": "vLLM 0.10.2",
+  "torch": "2.8.0+cu128",
+  "gpu": "RTX 3090 (single, CUDA_VISIBLE_DEVICES=2)",
+  "gpu_memory_utilization": 0.55,
+  "result": "SMOKE_OK — 模型成功加载并生成正确中文回答",
+  "generated_text": "KV Cache 复用是指在生成长文本时，将上一轮生成的键值（Key-Value）缓存保留下来，供后续生成步骤直接使用，从而避免重复计算，提升推理效率。",
+  "known_issues": [
+    "TTFT 采集错误：mark_first_token 调用时机晚于 chat() 返回，把 57s 引擎初始化算进了 TTFT — Phase 1 修",
+    "peak_gpu_mem_alloc=0 与 kv.used_blocks=null：vLLM v1 引擎跑在子进程(EngineCore_DP0)，父进程查不到其显存/块 — Phase 1 改用单进程模式(enforce_eager 或 VLLM_USE_V1=0 或直接查子进程统计)"
+  ],
+  "engine_init_seconds": 57.05
+}
