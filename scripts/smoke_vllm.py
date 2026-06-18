@@ -1,9 +1,10 @@
-"""vLLM smoke test：加载 Qwen3-4B-Instruct-2507 并生成（Phase 0）。
+"""vLLM smoke test：加载 Qwen3-4B-Instruct-2507 并生成（Phase 0 / Phase 1 指标验证）。
 
 需在 mimir 环境运行：
     source /opt/miniconda3/etc/profile.d/conda.sh && conda activate mimir
     python scripts/smoke_vllm.py
 
+默认用 v0 单进程引擎（VLLM_USE_V1=0），以便父进程读取 block_manager 与显存。
 自动选最空闲单卡（ADR-002/003）。退出码 0 表示通过。
 """
 
@@ -34,16 +35,25 @@ def main() -> int:
         gpu_memory_utilization=0.55,
         enable_prefix_caching=True,
         max_model_len=4096,
+        use_v1=False,  # v0 单进程：可读 block_manager + torch.cuda 显存
     )
     eng = VLLMEngine(cfg, device=0)
     col = MetricsCollector(device=0)
+
+    # 引擎初始化不计入 TTFT —— 在 track() 前预热引擎（触发 lazy init）
+    _ = eng.llm  # noqa: F841 — force init so engine_init_seconds is populated
+    print(f"engine_init_seconds={eng.engine_init_seconds:.1f}", flush=True)
+
     with col.track("smoke_qwen3_4b") as c:
         msgs = [
             {"role": "system", "content": "你是中文助手。"},
             {"role": "user", "content": "用一句话解释什么是 KV Cache 复用。"},
         ]
+        import time
+
+        t_req = time.perf_counter()
         txt, n = eng.chat(msgs, max_tokens=64, temperature=0.0)
-        c.mark_first_token()
+        c.mark_first_token_custom(t_req)
         c.add_output_tokens(n)
         c.success = True
         kv = eng.kv_usage()
@@ -53,11 +63,18 @@ def main() -> int:
     print("=== 指标 ===")
     print(
         json.dumps(
-            {**m.to_dict(), "kv": kv, "gpu": to_json(snapshot_env())},
+            {
+                **m.to_dict(),
+                "kv": kv,
+                "peak_gpu_mem_gib_via_engine": eng.peak_gpu_mem_gib(),
+                "gpu": to_json(snapshot_env()),
+            },
             ensure_ascii=False,
             indent=2,
         )
     )
+    assert kv.get("used_blocks") is not None, "kv.used_blocks 仍为 null — 指标采集未修复"
+    assert m.peak_gpu_mem_alloc_gib and m.peak_gpu_mem_alloc_gib > 0, "显存峰值仍为 0"
     print("SMOKE_OK")
     return 0
 

@@ -2,10 +2,20 @@
 
 纯编排层：依赖 ``mimir.engine_vllm``（引擎适配）与 ``mimir.metrics``（指标），
 以及 ``benchmarks.workloads``（工作流定义）。本身不含 vLLM 依赖，便于单测请求构建。
+
+指标采集
+--------
+- **TTFT**：在每次 ``engine.chat`` 之前重置计时起点，调用结束后立即标记首个 token
+  （单请求离线 generate 下，TTFT≈prefill 时间；多 token 时偏低估，但 baseline/optimized
+  口径一致，可用于对比）。
+- **KV 峰值块**：每个请求后查 ``kv_usage()``，取工作流全程的 ``used_blocks`` 峰值。
+- **显存峰值**：由 ``MetricsCollector`` 的 ``torch.cuda.max_memory_allocated`` 给出
+  （仅 v0 单进程有意义；见 engine_vllm 模块说明）。
 """
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 from benchmarks.workloads import WorkloadCase
@@ -71,7 +81,10 @@ def run_workload(
     max_tokens: int = 256,
     label: str = "run",
 ) -> RunMetrics:
-    """驱动引擎跑完一条工作流，返回含 KV 峰值的 ``RunMetrics``。"""
+    """驱动引擎跑完一条工作流，返回含 KV 峰值的 ``RunMetrics``。
+
+    TTFT 取第一个请求的 prefill 时间（请求开始→生成结束）。
+    """
     reqs = build_requests(case, max_tokens=max_tokens)
     col = MetricsCollector(device=engine.device)
     peak_kv_blocks = 0
@@ -81,10 +94,13 @@ def run_workload(
     with col.track(label) as c:
         ok = True
         for i, r in enumerate(reqs):
+            # 每个 request 独立计时，第一个 request 的耗时近似 TTFT
+            t_req = time.perf_counter()
             try:
                 _txt, n = engine.chat(r.messages, max_tokens=r.max_tokens)
                 if i == 0:
-                    c.mark_first_token()
+                    # 用首个 request 的生成完成时刻近似「首 token」
+                    c.mark_first_token_custom(t_req)
                 c.add_output_tokens(n)
             except Exception as e:  # noqa: BLE001
                 ok = False
@@ -106,4 +122,5 @@ def run_workload(
     m.extra["peak_kv_used_blocks"] = peak_kv_blocks or None
     m.extra["peak_kv_used_gib"] = peak_kv_gib
     m.extra["peak_kv_utilization"] = peak_kv_util
+    m.extra["engine_init_s"] = engine.engine_init_seconds
     return m

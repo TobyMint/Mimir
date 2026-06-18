@@ -107,6 +107,11 @@ class MetricsCollector:
         if self._t_first is None and self._t0 is not None:
             self._t_first = time.perf_counter()
 
+    def mark_first_token_custom(self, t: float) -> None:
+        """用给定的 ``perf_counter()`` 时刻标记首 token（用于离线 generate 近似 TTFT）。"""
+        if self._t_first is None and self._t0 is not None:
+            self._t_first = t
+
     def add_output_tokens(self, n: int) -> None:
         self._out_tokens += max(0, int(n))
 
