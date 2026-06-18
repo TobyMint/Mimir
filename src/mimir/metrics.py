@@ -90,7 +90,13 @@ class MetricsCollector:
         self._out_tokens = 0
         self.success = None
         if _HAS_TORCH and torch.cuda.is_available():
-            torch.cuda.reset_peak_memory_stats(self.device)
+            try:
+                torch.cuda.set_device(self.device)  # 确保目标设备上下文存在
+                torch.cuda.reset_peak_memory_stats(self.device)
+            except RuntimeError:
+                # 设备上下文未就绪或重置失败时降级：仅不重置峰值
+                # （峰值可能包含引擎初始化，可接受，不应导致采集崩溃）
+                pass
         try:
             yield self
         finally:
@@ -118,8 +124,11 @@ class MetricsCollector:
             throughput = self._out_tokens / e2e
         alloc = reserved = None
         if _HAS_TORCH and torch.cuda.is_available():
-            alloc = _gib(torch.cuda.max_memory_allocated(self.device))
-            reserved = _gib(torch.cuda.max_memory_reserved(self.device))
+            try:
+                alloc = _gib(torch.cuda.max_memory_allocated(self.device))
+                reserved = _gib(torch.cuda.max_memory_reserved(self.device))
+            except RuntimeError:
+                pass
         return RunMetrics(
             label=self._label,
             peak_gpu_mem_alloc_gib=alloc,

@@ -48,7 +48,17 @@
 
 **理由**：本机 NVIDIA 驱动为 12.8（`nvidia-smi` 显示 CUDA 12.8）。最新 vLLM 0.23.0 依赖 torch 2.11.0 + CUDA 13，运行时报 `"driver too old (found 12080)"`，`cuda_available=False`。torch 2.6.0+cu126 已验证在本机 `cuda_available=True`；vLLM 0.8.x 是匹配 torch 2.6 的稳定线。Phase 1–7 所需能力（`LLM`/`generate`/`chat`、Automatic Prefix Caching、CPU offload）0.8.x 均支持。代价：放弃 vLLM 最新特性。Phase 8 定点 patch 基于此版本。
 
+## ADR-008 最终 vLLM 组合：vLLM 0.10.2 + torch 2.8.0+cu128（2026-06-18）
+
+**决策**：采用 **vLLM 0.10.2**（用户建议），其依赖 **torch 2.8.0+cu128**（pip 默认），与本机驱动 12.8 完全匹配，ABI 自洽。
+
+**理由**：
+- ADR-007 的 vLLM 0.8.x 方案实践中 ABI 不匹配（0.8.5 的 `_C` 期望 torch2.6 pypi default，与手动装的 2.6+cu126 符号不一致，`undefined symbol: parseSchemaOrName`）。
+- vLLM 0.10.2 要求 torch 2.8.0，其 pypi wheel 自带 **cu128**，与驱动 12.8 天然匹配，无需手动指定 CUDA 变体 → ABI 自洽，`import vllm` 成功。
+- 0.10.x 能力（`LLM.chat`、APC、CPU offload、block manager 查询）满足 Phase 1–7 需求。
+- 代价：放弃 0.11+ / 0.23 更新特性（对本项目无影响）。
+
 ## 待决（开放问题）
 
-- ~~vLLM 具体版本~~ → 已决：0.8.x + torch 2.6.0+cu126（ADR-007）。
+- ~~vLLM 具体版本~~ → 已决：0.10.2 + torch 2.8.0+cu128（ADR-008）。
 - **分支 CoW 是否能完全靠 vLLM APC 实现，还是必须内核 patch**：Phase 4 探明后定。
