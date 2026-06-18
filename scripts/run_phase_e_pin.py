@@ -118,8 +118,9 @@ def main() -> int:
         max_tokens=args.max_tokens,
     )
     a_post = eng.mimir_stats()
+    cr = a_post.get("mimir_cow_reuses")
     print(
-        f"agent_A round2: used={a_post.get('used_blocks')}, cow_reuses={a_post.get('mimir_cow_reuses')}",
+        f"agent_A round2: used={a_post.get('used_blocks')}, cow_reuses={cr}",
         flush=True,
     )
 
