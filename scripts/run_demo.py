@@ -69,12 +69,7 @@ def run_progression(eng: VLLMEngine, *, compress: bool, max_turns: int, max_toke
             cumulative_new_prefill = 0
             ttft = None
             ok = False
-        # OOM 判定：若累计压力超阈值，baseline 视为 OOM
-        is_oom = (not ok) or (
-            cumulative_new_prefill > OOM_THRESHOLD_TOKENS and not compress and False
-        )
-        # 仅对 baseline 用「内存压力」判 OOM 不可靠（prefill 单轮）；改用：baseline 不压缩时
-        # 累计上下文 token 增长，Mimir 压缩后增长被压住。OOM 用「上下文超过 max_model_len」近似
+        # OOM 判定：本 demo 用「生成失败」标记 OOM；上下文增长差异由 new_prefill 曲线体现
         history.append(
             {
                 "turn": n,
@@ -137,10 +132,9 @@ def main() -> int:
     print("\n=== 对比 ===", flush=True)
     base_final = base["history"][-1]
     opt_final = opt["history"][-1]
-    print(
-        f"  末轮 new_prefill: baseline={base_final['new_prefill']}  Mimir={opt_final['new_prefill']}",
-        flush=True,
-    )
+    bn = base_final["new_prefill"]
+    on = opt_final["new_prefill"]
+    print(f"  末轮 new_prefill: baseline={bn}  Mimir={on}", flush=True)
     if base_final["new_prefill"] and opt_final["new_prefill"]:
         red = (1 - opt_final["new_prefill"] / base_final["new_prefill"]) * 100
         print(f"  Mimir 上下文节省: {red:.1f}%", flush=True)
