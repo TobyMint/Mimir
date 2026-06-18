@@ -2,7 +2,7 @@
 
 > **续上时先读本文件。** 记录当前阶段、已完成、进行中、阻塞、下一步、环境与 GPU 选择。
 
-**当前阶段**：新方向持续挖掘中。已实现 6 赛题方向 + 5 新方向（fp8量化/多任务协调/LLM语义压缩/实时仪表盘/端到端demo+GIF）+ 统一 MemoryManager 管线。79 测试通过。
+**当前阶段**：vLLM v0.10.2 in-tree patch（Phase A-G）全部完成并验证。Phase H 收尾中。
 
 **最后更新**：2026-06-18
 
@@ -66,3 +66,10 @@
 - 2026-06-18 新方向 LLM 语义压缩 + 实时仪表盘（54bb7cc）
 - 2026-06-18 统一 MemoryManager 管线 + 端到端 demo：上下文省 94.1%（f053752）
 - 2026-06-18 动态仪表盘 GIF（04b66b1）
+- 2026-06-19 Phase A：vLLM v0.10.2 submodule + editable + v1 InprocClient 可观测（d09f059）
+- 2026-06-19 Phase B：v1 块级统计导出 + Mimir v1 adapter（e118232/b719ae5）
+- 2026-06-19 Phase C：lifecycle 主动回收 — 10 块 used_blocks 10→0（2372b36/6127d97）
+- 2026-06-19 Phase D：分支 CoW 复用记账 — 4 分支 9 次复用（eb377c3）
+- 2026-06-19 Phase E：per-block KV-pin — 3/3 pinned 块压力下存活（ce6bed3）
+- 2026-06-19 Phase F：fp8 优雅降级到 bf16（aed4f43）
+- 2026-06-19 Phase G：'mimir' 调度策略 + MimirRequestQueue（845344b）
