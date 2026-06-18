@@ -1,0 +1,20 @@
+{
+  "multi_turn": {
+    "offloaded_count": 0,
+    "offloaded_chars": 0,
+    "inline_count": 0,
+    "store_size": 0
+  },
+  "tool_call": {
+    "offloaded_count": 6,
+    "offloaded_chars": 43776,
+    "inline_count": 0,
+    "store_size": 6
+  },
+  "multi_stage": {
+    "offloaded_count": 0,
+    "offloaded_chars": 0,
+    "inline_count": 0,
+    "store_size": 0
+  }
+}
