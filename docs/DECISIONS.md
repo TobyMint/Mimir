@@ -42,7 +42,13 @@
 
 **理由**：base 装了坏的 torch 2.11.0+cu130（cuda=False）；隔离环境避免影响他人、便于复现与回滚。
 
+## ADR-007 vLLM 版本：0.8.x + torch 2.6.0+cu126（CUDA 12，兼容驱动 12.8）（2026-06-18）
+
+**决策**：锁定 vLLM 0.8.x + torch 2.6.0+cu126，而非最新 vLLM。
+
+**理由**：本机 NVIDIA 驱动为 12.8（`nvidia-smi` 显示 CUDA 12.8）。最新 vLLM 0.23.0 依赖 torch 2.11.0 + CUDA 13，运行时报 `"driver too old (found 12080)"`，`cuda_available=False`。torch 2.6.0+cu126 已验证在本机 `cuda_available=True`；vLLM 0.8.x 是匹配 torch 2.6 的稳定线。Phase 1–7 所需能力（`LLM`/`generate`/`chat`、Automatic Prefix Caching、CPU offload）0.8.x 均支持。代价：放弃 vLLM 最新特性。Phase 8 定点 patch 基于此版本。
+
 ## 待决（开放问题）
 
-- **vLLM 具体版本**：待安装后确认与 torch 的兼容组合，回填 `ENV.md`。
+- ~~vLLM 具体版本~~ → 已决：0.8.x + torch 2.6.0+cu126（ADR-007）。
 - **分支 CoW 是否能完全靠 vLLM APC 实现，还是必须内核 patch**：Phase 4 探明后定。

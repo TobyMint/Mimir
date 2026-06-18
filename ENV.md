@@ -19,9 +19,9 @@ conda activate mimir
 
 - 路径：`/data/xbw/conda_envs/mimir`
 - Python：3.11.15
-- torch：2.6.0+cu126（cuda_avail=True）
-- vLLM：_（安装中，完成后填入实际版本）_
-- numpy：_（随 vLLM 安装补齐）_
+- torch：2.6.0+cu126（cuda_avail=True，驱动 12.8 兼容）
+- vLLM：0.8.x（重建中；首次尝试 0.23.0 需 torch2.11/cu13，与驱动 12.8 不兼容，已弃用 — 见 DECISIONS ADR-007）
+- numpy / matplotlib / pytest / ruff：随 dev 依赖安装
 
 > ⚠️ 共享的 miniconda base 装了**坏的 torch 2.11.0+cu130**（driver 太旧，cuda=False）。
 > 我们**只在新 `mimir` 环境里工作**，绝不碰 base。
