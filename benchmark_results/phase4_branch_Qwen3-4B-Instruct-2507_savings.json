@@ -1,0 +1,25 @@
+{
+  "branches": 8,
+  "depth": 2,
+  "cow_accounting": {
+    "naive_kv_tokens": 7040,
+    "cow_kv_tokens": 1500,
+    "saved_tokens": 5540,
+    "savings_pct": 78.7,
+    "active_branches": 72
+  },
+  "after_prune_accounting": {
+    "naive_kv_tokens": 0,
+    "cow_kv_tokens": 60,
+    "saved_tokens": 0,
+    "savings_pct": 0.0,
+    "active_branches": 0
+  },
+  "pruned_reclaimed_tokens": 1440,
+  "real_apc": {
+    "total_cached_tokens": 336,
+    "total_new_prefill_tokens": 306,
+    "prefix_reuse_pct": 52.3,
+    "avg_ttft_ms": 29.314428567886353
+  }
+}
