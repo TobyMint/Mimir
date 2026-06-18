@@ -73,43 +73,54 @@ def main() -> int:
     ]
     tasks = [("task_A", QUESTIONS), ("task_B", ["Explain recursion.", "What is an LLM?"])]
 
-    # ---- baseline：不调 finish_task ----
-    print("\n=== baseline（无 finish_task，LRU 被动保留）===", flush=True)
+    # 单引擎 A/B：跑任务，记录「无 finish_task」的驻留块数；再手动 finish 各任务，
+    # 对比 mimir_lifecycle_reclaims 增长。避免双引擎叠加显存 OOM。
+    print("\n=== 跑两个任务（不调 finish_task）===", flush=True)
     for tid, qs in tasks:
         run_task(eng, tid, qs, args.max_tokens)
-    base_stats = eng.mimir_stats()
-    print(f"after 2 tasks (no reclaim): {base_stats}", flush=True)
+    pre = eng.mimir_stats()
+    print(
+        f"任务完成后（未回收）: used_blocks={pre.get('used_blocks')} "
+        f"total={pre.get('total_blocks')} reclaims={pre.get('mimir_lifecycle_reclaims')}",
+        flush=True,
+    )
 
-    # ---- mimir：每任务结束调 finish_task ----
-    # 重置引擎状态：用新引擎避免 baseline 残留。同一进程内重新构造。
-    print("\n=== Mimir（每任务结束 mimir_finish_task 主动回收）===", flush=True)
-    eng2 = VLLMEngineV1(cfg, device=0)
-    _ = eng2.llm
+    # 现在 Mimir 主动回收每个任务
+    print("\n=== Mimir 主动回收（mimir_finish_task）===", flush=True)
     reclaims_total = 0
     snapshots = []
     for tid, qs in tasks:
-        run_task(eng2, tid, qs, args.max_tokens)
-        reclaimed = eng2.mimir_finish_task(tid)
+        reclaimed = eng.mimir_finish_task(tid)
         reclaims_total += reclaimed
-        snap = eng2.mimir_stats()
+        snap = eng.mimir_stats()
         snapshots.append({"task": tid, "reclaimed": reclaimed, "stats": snap})
-        print(f"after finish_task({tid}): reclaimed={reclaimed} stats={snap}", flush=True)
-    final_stats = eng2.mimir_stats()
-    print(f"\nMimir total reclaims: {reclaims_total}", flush=True)
+        print(
+            f"after finish_task({tid}): reclaimed={reclaimed} "
+            f"used_blocks={snap.get('used_blocks')} reclaims={snap.get('mimir_lifecycle_reclaims')}",
+            flush=True,
+        )
+    final_stats = eng.mimir_stats()
     print(
-        f"Mimir final lifecycle_reclaims: {final_stats.get('mimir_lifecycle_reclaims')}", flush=True
+        f"\nMimir total reclaims: {reclaims_total}  "
+        f"counter: {final_stats.get('mimir_lifecycle_reclaims')}",
+        flush=True,
+    )
+    print(
+        f"used_blocks: {pre.get('used_blocks')} (pre) -> {final_stats.get('used_blocks')} (post)",
+        flush=True,
     )
 
     summary = {
         "model": Path(args.model).name,
-        "baseline_no_reclaim": {
-            "mimir_lifecycle_reclaims": base_stats.get("mimir_lifecycle_reclaims", 0),
-            "free_blocks": base_stats.get("used_blocks"),
-            "total_blocks": base_stats.get("total_blocks"),
+        "before_reclaim": {
+            "used_blocks": pre.get("used_blocks"),
+            "total_blocks": pre.get("total_blocks"),
+            "mimir_lifecycle_reclaims": pre.get("mimir_lifecycle_reclaims", 0),
         },
-        "mimir_active_reclaim": {
+        "after_reclaim": {
             "total_reclaimed": reclaims_total,
             "mimir_lifecycle_reclaims": final_stats.get("mimir_lifecycle_reclaims", 0),
+            "used_blocks": final_stats.get("used_blocks"),
             "per_task": snapshots,
         },
     }
