@@ -3,20 +3,23 @@
 纯编排层：依赖 ``mimir.engine_vllm``（引擎适配）与 ``mimir.metrics``（指标），
 以及 ``benchmarks.workloads``（工作流定义）。本身不含 vLLM 依赖，便于单测请求构建。
 
-指标采集
---------
-- **TTFT**：在每次 ``engine.chat`` 之前重置计时起点，调用结束后立即标记首个 token
-  （单请求离线 generate 下，TTFT≈prefill 时间；多 token 时偏低估，但 baseline/optimized
-  口径一致，可用于对比）。
-- **KV 峰值块**：每个请求后查 ``kv_usage()``，取工作流全程的 ``used_blocks`` 峰值。
-- **显存峰值**：由 ``MetricsCollector`` 的 ``torch.cuda.max_memory_allocated`` 给出
-  （仅 v0 单进程有意义；见 engine_vllm 模块说明）。
+指标采集（精确口径）
+--------------------
+直接读取 vLLM ``RequestOutput`` 的 per-request 指标，避免近似与竞态：
+
+- **TTFT**：``metrics.first_token_time - metrics.arrival_time``（vLLM 实测）。
+- **E2E**：工作流 wall-clock（首个请求 arrival → 末请求 finished）。
+- **吞吐**：总输出 token / E2E。
+- **前缀命中**：``num_cached_tokens``（vLLM APC 命中数，衡量 prefix 复用）。
+- **新进 KV 的 prompt token**：``num_prompt_tokens - num_cached_tokens``（实际 prefill）。
+- **KV 块峰值**：每请求前后采样 block_manager，取全程峰值（best-effort，单进程 v0）。
+- **显存峰值**：``torch.cuda.max_memory_allocated``（单进程 v0）。
 """
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
+from typing import Any
 
 from benchmarks.workloads import WorkloadCase
 from mimir.engine_vllm import VLLMEngine
@@ -74,6 +77,36 @@ def build_requests(case: WorkloadCase, *, max_tokens: int = 256) -> list[Request
     return reqs
 
 
+def _req_metrics(ro: Any) -> dict[str, Any]:
+    """从 vLLM ``RequestOutput`` 提取 per-request 指标（容错）。"""
+    out: dict[str, Any] = {}
+    try:
+        out["num_prompt_tokens"] = len(ro.prompt_token_ids)
+    except Exception:
+        out["num_prompt_tokens"] = None
+    try:
+        out["num_output_tokens"] = sum(len(getattr(o, "token_ids", []) or []) for o in ro.outputs)
+    except Exception:
+        out["num_output_tokens"] = None
+    try:
+        out["num_cached_tokens"] = int(getattr(ro, "num_cached_tokens", 0) or 0)
+    except Exception:
+        out["num_cached_tokens"] = 0
+    m = getattr(ro, "metrics", None)
+    ttft = e2e = None
+    if m is not None:
+        arrival = getattr(m, "arrival_time", None)
+        first_tok = getattr(m, "first_token_time", None)
+        finished = getattr(m, "finished_time", None)
+        if arrival is not None and first_tok is not None:
+            ttft = (first_tok - arrival) * 1000.0
+        if arrival is not None and finished is not None:
+            e2e = finished - arrival
+    out["ttft_ms"] = ttft
+    out["req_e2e_s"] = e2e
+    return out
+
+
 def run_workload(
     engine: VLLMEngine,
     case: WorkloadCase,
@@ -81,39 +114,50 @@ def run_workload(
     max_tokens: int = 256,
     label: str = "run",
 ) -> RunMetrics:
-    """驱动引擎跑完一条工作流，返回含 KV 峰值的 ``RunMetrics``。
-
-    TTFT 取第一个请求的 prefill 时间（请求开始→生成结束）。
-    """
+    """驱动引擎跑完一条工作流，返回含 per-request 精确指标的 ``RunMetrics``。"""
     reqs = build_requests(case, max_tokens=max_tokens)
     col = MetricsCollector(device=engine.device)
     peak_kv_blocks = 0
     peak_kv_gib: float | None = None
-    peak_kv_util: float | None = None
+    per_req: list[dict[str, Any]] = []
+    total_out_tokens = 0
+    total_cached = 0
+    total_prefill_new = 0
+    first_ttft: float | None = None
+    avg_ttft_sum = 0.0
+    avg_ttft_n = 0
 
     with col.track(label) as c:
         ok = True
         for i, r in enumerate(reqs):
-            # 每个 request 独立计时，第一个 request 的耗时近似 TTFT
-            t_req = time.perf_counter()
             try:
-                _txt, n = engine.chat(r.messages, max_tokens=r.max_tokens)
-                if i == 0:
-                    # 用首个 request 的生成完成时刻近似「首 token」
-                    c.mark_first_token_custom(t_req)
-                c.add_output_tokens(n)
+                ro = engine.chat_full(r.messages, max_tokens=r.max_tokens)
+                rm = _req_metrics(ro)
+                per_req.append({"label": r.label, **rm})
+                if rm.get("num_output_tokens"):
+                    total_out_tokens += rm["num_output_tokens"]
+                total_cached += rm.get("num_cached_tokens", 0) or 0
+                if rm.get("num_prompt_tokens") is not None:
+                    total_prefill_new += max(
+                        0, rm["num_prompt_tokens"] - (rm.get("num_cached_tokens", 0) or 0)
+                    )
+                if rm.get("ttft_ms") is not None:
+                    avg_ttft_sum += rm["ttft_ms"]
+                    avg_ttft_n += 1
+                    if i == 0:
+                        first_ttft = rm["ttft_ms"]
+                # 块峰值采样（单进程 v0，生成后块已释放，但并发/长上下文仍可观测）
+                kv = engine.kv_usage()
+                ub = kv.get("used_blocks")
+                if ub is not None:
+                    peak_kv_blocks = max(peak_kv_blocks, ub)
+                if kv.get("used_gib") is not None:
+                    peak_kv_gib = max(peak_kv_gib or 0.0, kv["used_gib"])
             except Exception as e:  # noqa: BLE001
                 ok = False
                 c.set_extra(error=str(e))
                 break
-            kv = engine.kv_usage()
-            ub = kv.get("used_blocks")
-            if ub is not None:
-                peak_kv_blocks = max(peak_kv_blocks, ub)
-            if kv.get("used_gib") is not None:
-                peak_kv_gib = max(peak_kv_gib or 0.0, kv["used_gib"])
-            if kv.get("utilization") is not None:
-                peak_kv_util = max(peak_kv_util or 0.0, kv["utilization"])
+        c.add_output_tokens(total_out_tokens)
         c.success = ok
 
     m = col.metrics()
@@ -121,6 +165,13 @@ def run_workload(
     m.extra["num_requests"] = len(reqs)
     m.extra["peak_kv_used_blocks"] = peak_kv_blocks or None
     m.extra["peak_kv_used_gib"] = peak_kv_gib
-    m.extra["peak_kv_utilization"] = peak_kv_util
+    m.extra["total_cached_tokens"] = total_cached
+    m.extra["total_prefill_new_tokens"] = total_prefill_new
+    m.extra["first_ttft_ms"] = first_ttft
+    m.extra["avg_ttft_ms"] = (avg_ttft_sum / avg_ttft_n) if avg_ttft_n else None
+    m.extra["per_request"] = per_req
     m.extra["engine_init_s"] = engine.engine_init_seconds
+    # 用 vLLM 实测 TTFT 覆盖近似值（更准）
+    if first_ttft is not None:
+        m.ttft_ms = first_ttft
     return m

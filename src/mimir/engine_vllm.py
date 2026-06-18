@@ -218,6 +218,18 @@ class VLLMEngine:
         n_tok = len(getattr(out, "token_ids", []) or [])
         return out.text, max(1, n_tok)
 
+    def chat_full(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        max_tokens: int = 256,
+        temperature: float = 0.0,
+    ) -> Any:
+        """单轮 chat，返回完整 ``RequestOutput``（含 metrics / num_cached_tokens）。"""
+        sp = self._make_sp(max_tokens, temperature)
+        outs = self.llm.chat([messages], sp, use_tqdm=False)
+        return outs[0]
+
     def generate_prompts(
         self,
         prompts: list[str],
