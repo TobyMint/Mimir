@@ -30,6 +30,7 @@ class _FakeBlockPool:
         self.mimir_block_task = {}
         self.mimir_block_lifecycle = {}
         self.mimir_lifecycle_reclaims = 0
+        self.mimir_used_blocks = 0
         # free 队列（用 list 模拟）
         self._free = list(self.blocks)
         self.kv_event_queue = []
@@ -60,6 +61,7 @@ class _FakeBlockPool:
             self._free.append(block)
             self.mimir_block_task.pop(bid, None)
             self.mimir_block_lifecycle.pop(bid, None)
+            self.mimir_used_blocks = max(0, self.mimir_used_blocks - 1)
             reclaimed += 1
         self.mimir_lifecycle_reclaims += reclaimed
         return reclaimed
@@ -89,6 +91,7 @@ def _occupy(bp, task_id, block_ids, ref_cnts=None, hashes=None):
         # 从 free 中移除
         if blk in bp._free:
             bp._free.remove(blk)
+            bp.mimir_used_blocks += 1
 
 
 def test_finish_task_reclaims_free_zero_refcnt_blocks() -> None:

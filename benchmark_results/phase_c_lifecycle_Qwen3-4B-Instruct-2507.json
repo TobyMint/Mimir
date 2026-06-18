@@ -1,0 +1,43 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "before_reclaim": {
+    "used_blocks": 10,
+    "total_blocks": 1780,
+    "mimir_lifecycle_reclaims": 0
+  },
+  "after_reclaim": {
+    "total_reclaimed": 10,
+    "mimir_lifecycle_reclaims": 10,
+    "used_blocks": 0,
+    "per_task": [
+      {
+        "task": "task_A",
+        "reclaimed": 4,
+        "stats": {
+          "used_blocks": 6,
+          "total_blocks": 1780,
+          "utilization": -0.0022484541877458852,
+          "num_running_reqs": 0,
+          "num_waiting_reqs": 0,
+          "mimir_lifecycle_reclaims": 4,
+          "mimir_cow_reuses": 0,
+          "mimir_pin_hits": 0
+        }
+      },
+      {
+        "task": "task_B",
+        "reclaimed": 6,
+        "stats": {
+          "used_blocks": 0,
+          "total_blocks": 1780,
+          "utilization": -0.005621135469364713,
+          "num_running_reqs": 0,
+          "num_waiting_reqs": 0,
+          "mimir_lifecycle_reclaims": 10,
+          "mimir_cow_reuses": 0,
+          "mimir_pin_hits": 0
+        }
+      }
+    ]
+  }
+}
