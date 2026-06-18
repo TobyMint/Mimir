@@ -1,0 +1,14 @@
+{
+  "phase": "G",
+  "date": "2026-06-19",
+  "policy": "mimir",
+  "result": "PHASE_G_OK — 'mimir' scheduling policy registered and active",
+  "evidence": "engine log: 'Mimir scheduling policy active (lifecycle+CoW+pin enabled)'; engine loads, generates, mimir_stats readable",
+  "files_patched": [
+    "vllm/config/scheduler.py (SchedulerPolicy += 'mimir')",
+    "vllm/v1/core/sched/request_queue.py (SchedulingPolicy.MIMIR + MimirRequestQueue)",
+    "vllm/v1/core/sched/scheduler.py (dispatch 'mimir' -> SchedulingPolicy.MIMIR)"
+  ],
+  "usage": "LLM(..., scheduling_policy='mimir') via EngineConfig.extra",
+  "composes": "Phase C lifecycle reclaim + Phase D CoW accounting + Phase E pin (manager.py coordinates)"
+}
