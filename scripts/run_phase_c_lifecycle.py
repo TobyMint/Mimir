@@ -89,14 +89,15 @@ def main() -> int:
     print("\n=== Mimir 主动回收（mimir_finish_task）===", flush=True)
     reclaims_total = 0
     snapshots = []
-    for tid, qs in tasks:
+    for tid, _qs in tasks:
         reclaimed = eng.mimir_finish_task(tid)
         reclaims_total += reclaimed
         snap = eng.mimir_stats()
         snapshots.append({"task": tid, "reclaimed": reclaimed, "stats": snap})
+        rb = snap.get("mimir_lifecycle_reclaims")
         print(
             f"after finish_task({tid}): reclaimed={reclaimed} "
-            f"used_blocks={snap.get('used_blocks')} reclaims={snap.get('mimir_lifecycle_reclaims')}",
+            f"used_blocks={snap.get('used_blocks')} reclaims={rb}",
             flush=True,
         )
     final_stats = eng.mimir_stats()
