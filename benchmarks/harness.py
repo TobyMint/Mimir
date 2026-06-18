@@ -35,7 +35,12 @@ class RequestSpec:
     label: str = ""
 
 
-def build_requests(case: WorkloadCase, *, max_tokens: int = 256) -> list[RequestSpec]:
+def build_requests(
+    case: WorkloadCase,
+    *,
+    max_tokens: int = 256,
+    offload_store: Any | None = None,
+) -> list[RequestSpec]:
     """把 ``WorkloadCase`` 转为 ``RequestSpec`` 列表（纯函数，不依赖 vLLM）。
 
     - **multi_turn**：每轮一个请求，上下文累积（前缀可被 vLLM APC 复用）。
@@ -66,7 +71,12 @@ def build_requests(case: WorkloadCase, *, max_tokens: int = 256) -> list[Request
         if i < len(case.tool_results):
             tr = case.tool_results[i]
             history.append({"role": "assistant", "content": f"[tool: {tr.name}]"})
-            history.append({"role": "tool", "content": tr.content})
+            if offload_store is not None:
+                # 大工具返回外置，上下文只放引用+摘要
+                ctx = offload_store.put(tr.name, tr.content)
+            else:
+                ctx = tr.content
+            history.append({"role": "tool", "content": ctx})
         reqs.append(
             RequestSpec(
                 messages=[dict(m) for m in history],
@@ -113,9 +123,10 @@ def run_workload(
     *,
     max_tokens: int = 256,
     label: str = "run",
+    offload_store: Any | None = None,
 ) -> RunMetrics:
     """驱动引擎跑完一条工作流，返回含 per-request 精确指标的 ``RunMetrics``。"""
-    reqs = build_requests(case, max_tokens=max_tokens)
+    reqs = build_requests(case, max_tokens=max_tokens, offload_store=offload_store)
     col = MetricsCollector(device=engine.device)
     peak_kv_blocks = 0
     peak_kv_gib: float | None = None
