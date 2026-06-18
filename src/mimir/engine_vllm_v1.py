@@ -123,6 +123,57 @@ class VLLMEngineV1(VLLMEngine):
     def mimir_block_pool(self) -> Any | None:
         return _resolve_v1_block_pool(self._llm)
 
+    def _engine_core(self) -> Any | None:
+        try:
+            return self._llm.llm_engine.engine_core.engine_core
+        except Exception:
+            return None
+
+    def set_current_task(self, task_id: str | None) -> None:
+        """设置后续请求归属的 agent 任务 id（注入 engine_core._mimir_current_task）。"""
+        ec = self._engine_core()
+        if ec is not None:
+            ec._mimir_current_task = task_id  # noqa: SLF001
+
+    def chat_task(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        task_id: str,
+        max_tokens: int = 128,
+        temperature: float = 0.0,
+    ) -> tuple[str, int]:
+        """带任务标记的 chat：先把 task_id 设为当前，再 chat。返回 (text, n_tokens)。"""
+        self.set_current_task(task_id)
+        return self.chat(messages, max_tokens=max_tokens, temperature=temperature)
+
+    def mimir_finish_task(self, task_id: str) -> int:
+        """任务结束：调 block_pool.mimir_finish_task 主动回收该任务 KV。返回回收块数。"""
+        bp = self.mimir_block_pool()
+        if bp is None:
+            return 0
+        fn = getattr(bp, "mimir_finish_task", None)
+        if callable(fn):
+            try:
+                return int(fn(task_id))
+            except Exception:
+                return 0
+        return 0
+
+    def mimir_pin_task_blocks(self, task_id: str) -> int:
+        """pin 某任务当前拥有的块（Phase E）。返回 pin 数。"""
+        bp = self.mimir_block_pool()
+        if bp is None:
+            return 0
+        get_ids = getattr(bp, "mimir_get_task_block_ids", None)
+        pin = getattr(bp, "mimir_pin_blocks", None)
+        if callable(get_ids) and callable(pin):
+            try:
+                return int(pin(get_ids(task_id)))
+            except Exception:
+                return 0
+        return 0
+
     def mimir_stats(self) -> dict[str, Any]:
         """读取 scheduler 上由 in-tree patch 暴露的 Mimir 统计（Phase B）。"""
         sched = self.mimir_scheduler()
