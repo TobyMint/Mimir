@@ -1,0 +1,47 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "branches": 4,
+  "engine_measured": {
+    "mimir_cow_reuses": 9,
+    "per_branch": [
+      {
+        "branch": "branch_0",
+        "used_blocks": 6,
+        "mimir_cow_reuses": 0,
+        "out_tokens": 32
+      },
+      {
+        "branch": "branch_1",
+        "used_blocks": 9,
+        "mimir_cow_reuses": 3,
+        "out_tokens": 32
+      },
+      {
+        "branch": "branch_2",
+        "used_blocks": 12,
+        "mimir_cow_reuses": 6,
+        "out_tokens": 32
+      },
+      {
+        "branch": "branch_3",
+        "used_blocks": 15,
+        "mimir_cow_reuses": 9,
+        "out_tokens": 32
+      }
+    ],
+    "final_used_blocks": 15,
+    "total_blocks": 1780
+  },
+  "mimir_branchtree_prediction": {
+    "naive_kv_tokens": 320,
+    "cow_kv_tokens": 140,
+    "saved_tokens": 180,
+    "savings_pct": 56.2,
+    "active_branches": 4
+  },
+  "comparison": {
+    "engine_cow_reuses": 9,
+    "prediction_saved_tokens": 180,
+    "prediction_reuse_pct": 56.2
+  }
+}
