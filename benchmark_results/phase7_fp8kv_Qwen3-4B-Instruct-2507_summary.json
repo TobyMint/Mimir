@@ -1,0 +1,47 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "bf16_kv_total_blocks": 1772,
+  "fp8_kv_total_blocks": 3659,
+  "fp8_capacity_gain": 2.06,
+  "per_workload": [
+    {
+      "workload": "multi_turn",
+      "bf16": {
+        "ttft_ms": 51.15485191345215,
+        "new_prefill": 398,
+        "success": true
+      },
+      "fp8": {
+        "ttft_ms": 51.007986068725586,
+        "new_prefill": 202,
+        "success": false
+      }
+    },
+    {
+      "workload": "tool_call",
+      "bf16": {
+        "ttft_ms": 293.89309883117676,
+        "new_prefill": 3792,
+        "success": false
+      },
+      "fp8": {
+        "ttft_ms": null,
+        "new_prefill": 0,
+        "success": false
+      }
+    },
+    {
+      "workload": "multi_stage",
+      "bf16": {
+        "ttft_ms": 29.31833267211914,
+        "new_prefill": 40,
+        "success": true
+      },
+      "fp8": {
+        "ttft_ms": null,
+        "new_prefill": 0,
+        "success": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,256 @@
+[
+  {
+    "label": "bf16_multi_turn",
+    "peak_gpu_mem_alloc_gib": 11.530981063842773,
+    "peak_gpu_mem_reserved_gib": 11.6484375,
+    "ttft_ms": 51.15485191345215,
+    "e2e_latency_s": 8.933101780712605,
+    "throughput_tok_per_s": 57.31491844248943,
+    "task_success": true,
+    "extra": {
+      "workload": "multi_turn",
+      "num_requests": 8,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 1744,
+      "total_prefill_new_tokens": 398,
+      "first_ttft_ms": 51.15485191345215,
+      "avg_ttft_ms": 35.54806113243103,
+      "per_request": [
+        {
+          "label": "turn_0",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 0,
+          "ttft_ms": 51.15485191345215,
+          "req_e2e_s": 1.107964038848877
+        },
+        {
+          "label": "turn_1",
+          "num_prompt_tokens": 221,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 192,
+          "ttft_ms": 34.93142127990723,
+          "req_e2e_s": 1.0248351097106934
+        },
+        {
+          "label": "turn_2",
+          "num_prompt_tokens": 237,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 208,
+          "ttft_ms": 35.80737113952637,
+          "req_e2e_s": 1.0470054149627686
+        },
+        {
+          "label": "turn_3",
+          "num_prompt_tokens": 263,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 224,
+          "ttft_ms": 32.804012298583984,
+          "req_e2e_s": 1.0366220474243164
+        },
+        {
+          "label": "turn_4",
+          "num_prompt_tokens": 279,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 256,
+          "ttft_ms": 33.185720443725586,
+          "req_e2e_s": 1.038182020187378
+        },
+        {
+          "label": "turn_5",
+          "num_prompt_tokens": 295,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 272,
+          "ttft_ms": 33.72907638549805,
+          "req_e2e_s": 1.035060167312622
+        },
+        {
+          "label": "turn_6",
+          "num_prompt_tokens": 313,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 288,
+          "ttft_ms": 34.80386734008789,
+          "req_e2e_s": 1.0068395137786865
+        },
+        {
+          "label": "turn_7",
+          "num_prompt_tokens": 332,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 304,
+          "ttft_ms": 27.968168258666992,
+          "req_e2e_s": 1.0408167839050293
+        }
+      ],
+      "engine_init_s": 43.268798413686454
+    }
+  },
+  {
+    "label": "bf16_tool_call",
+    "peak_gpu_mem_alloc_gib": 11.656823635101318,
+    "peak_gpu_mem_reserved_gib": 11.931640625,
+    "ttft_ms": 293.89309883117676,
+    "e2e_latency_s": 1.997370582073927,
+    "throughput_tok_per_s": 40.55331580777333,
+    "task_success": false,
+    "extra": {
+      "error": "The decoder prompt (length 5862) is longer than the maximum model length of 4096. Make sure that `max_model_len` is no smaller than the number of text tokens.",
+      "workload": "tool_call",
+      "num_requests": 6,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 2256,
+      "total_prefill_new_tokens": 3792,
+      "first_ttft_ms": 293.89309883117676,
+      "avg_ttft_ms": 318.0803060531616,
+      "per_request": [
+        {
+          "label": "turn_0",
+          "num_prompt_tokens": 2077,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 192,
+          "ttft_ms": 293.89309883117676,
+          "req_e2e_s": 1.318854808807373
+        },
+        {
+          "label": "turn_1",
+          "num_prompt_tokens": 3971,
+          "num_output_tokens": 17,
+          "num_cached_tokens": 2064,
+          "ttft_ms": 342.2675132751465,
+          "req_e2e_s": 0.6098415851593018
+        }
+      ],
+      "engine_init_s": 43.268798413686454
+    }
+  },
+  {
+    "label": "bf16_multi_stage",
+    "peak_gpu_mem_alloc_gib": 11.518740177154541,
+    "peak_gpu_mem_reserved_gib": 11.931640625,
+    "ttft_ms": 29.31833267211914,
+    "e2e_latency_s": 4.197187641635537,
+    "throughput_tok_per_s": 60.99322257135097,
+    "task_success": true,
+    "extra": {
+      "workload": "multi_stage",
+      "num_requests": 4,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 768,
+      "total_prefill_new_tokens": 40,
+      "first_ttft_ms": 29.31833267211914,
+      "avg_ttft_ms": 29.88755702972412,
+      "per_request": [
+        {
+          "label": "branch_0",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 192,
+          "ttft_ms": 29.31833267211914,
+          "req_e2e_s": 1.0358734130859375
+        },
+        {
+          "label": "branch_1",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 192,
+          "ttft_ms": 32.25898742675781,
+          "req_e2e_s": 1.0362424850463867
+        },
+        {
+          "label": "branch_2",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 192,
+          "ttft_ms": 29.079914093017578,
+          "req_e2e_s": 1.041367769241333
+        },
+        {
+          "label": "branch_3",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 192,
+          "ttft_ms": 28.892993927001953,
+          "req_e2e_s": 1.020294189453125
+        }
+      ],
+      "engine_init_s": 43.268798413686454
+    }
+  },
+  {
+    "label": "fp8_multi_turn",
+    "peak_gpu_mem_alloc_gib": 11.666723728179932,
+    "peak_gpu_mem_reserved_gib": 11.810546875,
+    "ttft_ms": 51.007986068725586,
+    "e2e_latency_s": 2.4132526544854045,
+    "throughput_tok_per_s": 26.520223599897868,
+    "task_success": false,
+    "extra": {
+      "error": "at 1:0:\ndef _fwd_kernel(Q,\n^\nValueError(\"type fp8e4nv not supported in this architecture. The supported fp8 dtypes are ('fp8e4b15', 'fp8e5')\")",
+      "workload": "multi_turn",
+      "num_requests": 8,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 0,
+      "total_prefill_new_tokens": 202,
+      "first_ttft_ms": 51.007986068725586,
+      "avg_ttft_ms": 51.007986068725586,
+      "per_request": [
+        {
+          "label": "turn_0",
+          "num_prompt_tokens": 202,
+          "num_output_tokens": 64,
+          "num_cached_tokens": 0,
+          "ttft_ms": 51.007986068725586,
+          "req_e2e_s": 1.309697151184082
+        }
+      ],
+      "engine_init_s": 30.911323686130345
+    }
+  },
+  {
+    "label": "fp8_tool_call",
+    "peak_gpu_mem_alloc_gib": 11.738215923309326,
+    "peak_gpu_mem_reserved_gib": 11.880859375,
+    "ttft_ms": null,
+    "e2e_latency_s": 0.030678661540150642,
+    "throughput_tok_per_s": null,
+    "task_success": false,
+    "extra": {
+      "error": "at 1:0:\ndef _fwd_kernel(Q,\n^\nValueError(\"type fp8e4nv not supported in this architecture. The supported fp8 dtypes are ('fp8e4b15', 'fp8e5')\")",
+      "workload": "tool_call",
+      "num_requests": 6,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 0,
+      "total_prefill_new_tokens": 0,
+      "first_ttft_ms": null,
+      "avg_ttft_ms": null,
+      "per_request": [],
+      "engine_init_s": 30.911323686130345
+    }
+  },
+  {
+    "label": "fp8_multi_stage",
+    "peak_gpu_mem_alloc_gib": 11.652343273162842,
+    "peak_gpu_mem_reserved_gib": 11.880859375,
+    "ttft_ms": null,
+    "e2e_latency_s": 0.015506347641348839,
+    "throughput_tok_per_s": null,
+    "task_success": false,
+    "extra": {
+      "error": "at 1:0:\ndef _fwd_kernel(Q,\n^\nValueError(\"type fp8e4nv not supported in this architecture. The supported fp8 dtypes are ('fp8e4b15', 'fp8e5')\")",
+      "workload": "multi_stage",
+      "num_requests": 4,
+      "peak_kv_used_blocks": null,
+      "peak_kv_used_gib": null,
+      "total_cached_tokens": 0,
+      "total_prefill_new_tokens": 0,
+      "first_ttft_ms": null,
+      "avg_ttft_ms": null,
+      "per_request": [],
+      "engine_init_s": 30.911323686130345
+    }
+  }
+]
