@@ -31,6 +31,8 @@ class _FakeBlockPool:
         self.mimir_block_lifecycle = {}
         self.mimir_lifecycle_reclaims = 0
         self.mimir_used_blocks = 0
+        self.mimir_cow_reuses = 0
+        self.mimir_pin_hits = 0
         # free 队列（用 list 模拟）
         self._free = list(self.blocks)
         self.kv_event_queue = []
@@ -45,6 +47,7 @@ class _FakeBlockPool:
             lc = self.mimir_block_lifecycle.get(bid, "active")
             if lc == "pinned":
                 self.mimir_block_lifecycle[bid] = "evictable"
+                self.mimir_pin_hits += 1
                 continue
             block = self.blocks[bid]
             if block.ref_cnt != 0:
@@ -126,6 +129,7 @@ def test_finish_task_skips_pinned_blocks() -> None:
     # 块 1 pin -> 标记 evictable（保留可被后续压力淘汰）
     assert bp.mimir_block_lifecycle.get(1) == "evictable"
     assert 1 in bp.mimir_block_task  # 块 1 仍记录归属
+    assert bp.mimir_pin_hits == 1  # pin 阻止了一次回收
 
 
 def test_finish_task_none_returns_zero() -> None:
