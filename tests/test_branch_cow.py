@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mimir.branch.cow import BranchTree, build_tot_tree
+from mimir.branch.cow import build_tot_tree
 
 
 def test_single_layer_sharing() -> None:

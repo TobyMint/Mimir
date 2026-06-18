@@ -156,7 +156,7 @@ def build_tot_tree(
     """
     tree = BranchTree(root_prefix_len=root_prefix_len)
     frontier = [0]  # 根
-    for d in range(depth):
+    for _ in range(depth):
         new_frontier = []
         for pid in frontier:
             for _ in range(num_branches):
