@@ -16,6 +16,22 @@
 **Mimir** 是一个面向智能体推理过程的内存管理系统，在保证推理效果的前提下，通过对
 KV Cache、上下文结构及显存分配机制的系统性优化，有效降低内存占用并提升整体推理效率。
 
+## vLLM 0.10.2 In-Tree Patch（内核级优化）
+
+Mimir 不仅在 vLLM 之上做外部封装，更**直接 patch 了 vLLM v0.10.2 源码**（作为 git submodule
+`third_party/vllm`，分支 `mimir-patches-v0.10.2`，纯 Python、不重编 `_C`）：
+
+| 引擎层 patch | 真实验证 |
+| --- | --- |
+| **任务边界主动回收**（`block_pool.mimir_finish_task`） | 2 agent 任务的 10 个 KV 块 used_blocks **10→0**（vLLM LRU 做不到） |
+| **分支 CoW 复用记账**（`kv_cache_manager`） | 4 分支测得 **9 次跨分支 KV 复用**（与 BranchTree 预测一致） |
+| **per-block KV-pin**（lifecycle-bounded） | agent 3 块 in agent B 压力下 **3/3 存活** |
+| **fp8 KV 优雅降级**（arg_utils oracle） | 不支持的硬件上**降级 bf16**而非崩溃 |
+| **'mimir' 调度策略**（`SchedulerPolicy` + `MimirRequestQueue`） | `scheduling_policy="mimir"` 跑通 |
+
+详见 [`docs/VLLM_PATCH_INVENTORY.md`](docs/VLLM_PATCH_INVENTORY.md) 与 [`docs/VLLM_EDITABLE_SETUP.md`](docs/VLLM_EDITABLE_SETUP.md)。
+区别于同实验室 Continuum（pin 工具调用暂停）—— Mimir 在任务边界主动回收 + per-block pin + CoW 记账 + fp8 容错。
+
 ## 核心优化方向
 
 本赛题推荐的优化方向，本项目均规划支持（详见 [`docs/技术方案.md`](docs/技术方案.md)）：
