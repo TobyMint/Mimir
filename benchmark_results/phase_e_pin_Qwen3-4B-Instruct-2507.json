@@ -1,0 +1,15 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "agent_a_blocks_round1": 3,
+  "pinned_blocks": 3,
+  "agent_b_used_blocks": 5,
+  "pinned_surviving_pressure": 3,
+  "agent_a_round2_used": 7,
+  "agent_a_round2_cow_reuses": 0,
+  "differentiation_vs_continuum": {
+    "trigger": "agent-turn-boundary (not tool-call-text-parse)",
+    "bound": "lifecycle (until next turn, not time-estimated)",
+    "granularity": "per-block (prefix only, not whole-request)",
+    "composes_with": "Phase C lifecycle evictor (PINNED skipped on finish_task)"
+  }
+}
