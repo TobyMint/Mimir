@@ -1,0 +1,25 @@
+{
+  "config": {
+    "tasks": 8,
+    "blocks_per_task": 4,
+    "reuse_within_task": 3,
+    "capacity": 12
+  },
+  "lifecycle": {
+    "hits": 24,
+    "misses": 0,
+    "hit_rate": 1.0,
+    "evictions": 0,
+    "lifecycle_reclaims": 32
+  },
+  "pure_lru": {
+    "hits": 24,
+    "misses": 0,
+    "hit_rate": 1.0,
+    "evictions": 20,
+    "lifecycle_reclaims": 0
+  },
+  "lifecycle_reclaim_pct": 100.0,
+  "lru_reclaim_pct": 0.0,
+  "hit_rate_delta_pct": 0.0
+}
