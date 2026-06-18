@@ -73,3 +73,25 @@ def test_threshold_control() -> None:
     mid = "x" * (DEFAULT_INLINE_THRESHOLD + 1)
     out = store.put("t", mid, inline_threshold=DEFAULT_INLINE_THRESHOLD)
     assert "TOOL_RESULT" in out  # 超阈值→外置
+
+
+def test_offload_with_tiered_backend_promotes_on_access() -> None:
+    """外置数据进入分层后，materialize 会从冷层 promote 回来。"""
+    from mimir.tiered.store import Tier, TieredStore
+
+    tiered = TieredStore(gpu_cap=1, host_cap=1, disk_dir=None)
+    store = ToolDataStore(tiered=tiered)
+    # 放 3 个大结果：第 1 个最终落到 DISK
+    for i in range(3):
+        store.put("search", "x" * 2000 + str(i))
+    stats = store.stats()
+    assert stats["offloaded_count"] == 3
+    # materialize 仍能取回（从任意层）
+    # 取最后一个 ref（在 GPU）
+    snap = tiered.snapshot()
+    assert len(snap["disk"]) >= 1
+    any_disk_key = snap["disk"][0]
+    val = store.materialize(any_disk_key)
+    assert val is not None
+    assert tiered._tier_of(any_disk_key) is Tier.GPU  # promote 回热层
+    assert tiered.stats.promotions >= 1

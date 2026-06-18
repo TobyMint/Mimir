@@ -1,0 +1,17 @@
+{
+  "turns": 20,
+  "gpu_cap": 4,
+  "host_cap": 16,
+  "baseline_oom_turn": 5,
+  "baseline_survived": 4,
+  "tiered_survived": 20,
+  "tiered_final_stats": {
+    "gpu_count": 4,
+    "host_count": 16,
+    "disk_count": 0,
+    "total": 20,
+    "promotions": 0,
+    "demotions": 16,
+    "disk_reads": 0
+  }
+}

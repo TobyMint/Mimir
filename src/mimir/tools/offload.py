@@ -75,12 +75,19 @@ class ToolDataStore:
     线程安全。支持按需 ``materialize`` 取回完整数据。
     """
 
-    def __init__(self, *, disk_dir: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        disk_dir: str | Path | None = None,
+        tiered: Any | None = None,
+    ) -> None:
         self._store: dict[str, str] = {}
         self._lock = threading.Lock()
         self._disk_dir = Path(disk_dir) if disk_dir else None
         if self._disk_dir:
             self._disk_dir.mkdir(parents=True, exist_ok=True)
+        # 可选：分层存储后端（GPU/HOST/DISK 自动迁移）。提供则外置数据进入分层体系。
+        self._tiered = tiered
         # 统计
         self.offloaded_count = 0
         self.offloaded_chars = 0
@@ -107,11 +114,14 @@ class ToolDataStore:
             return content
         rid = _ref_id(content)
         with self._lock:
-            self._store[rid] = content
+            if self._tiered is not None:
+                self._tiered.put(rid, content)  # 进入分层（自动 GPU->HOST->DISK）
+            else:
+                self._store[rid] = content
             self.offloaded_count += 1
             self.offloaded_chars += len(content)
-        # 可选落盘（冷数据外存）
-        if self._disk_dir:
+        # 可选落盘（冷数据外存；分层未启用时的简单落盘）
+        if self._disk_dir and self._tiered is None:
             (self._disk_dir / f"{rid}.json").write_text(content, encoding="utf-8")
         ref = ToolDataRef(
             ref_id=rid,
@@ -123,8 +133,10 @@ class ToolDataStore:
         return ref.as_context_text()
 
     def materialize(self, ref_id: str) -> str | None:
-        """按需取回完整数据（lazy load）。"""
+        """按需取回完整数据（lazy load）。冷数据会从 DISK/HOST 自动 promote。"""
         with self._lock:
+            if self._tiered is not None:
+                return self._tiered.get(ref_id)  # 自动 promote 回热层
             if ref_id in self._store:
                 return self._store[ref_id]
         if self._disk_dir:
