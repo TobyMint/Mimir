@@ -1,0 +1,26 @@
+{
+  "multi_turn": {
+    "original_chars": 1263,
+    "compressed_chars": 1263,
+    "original_turns": 8,
+    "compressed_turns": 8,
+    "tool_results_summarized": 0,
+    "static_prefix_chars": 777
+  },
+  "tool_call": {
+    "original_chars": 44907,
+    "compressed_chars": 1353,
+    "original_turns": 6,
+    "compressed_turns": 6,
+    "tool_results_summarized": 6,
+    "static_prefix_chars": 777
+  },
+  "multi_stage": {
+    "original_chars": 843,
+    "compressed_chars": 843,
+    "original_turns": 1,
+    "compressed_turns": 1,
+    "tool_results_summarized": 0,
+    "static_prefix_chars": 777
+  }
+}
