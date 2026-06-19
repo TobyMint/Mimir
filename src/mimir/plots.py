@@ -39,9 +39,16 @@ def plot_kv_mem_comparison(
     results: Sequence[RunMetrics],
     out_path: str | Path,
     *,
-    title: str = "KV Cache Memory Comparison",
+    title: str = "KV Cache: new prefill tokens",
 ) -> str:
-    """分组柱状图：每个工作流的 baseline vs optimized 峰值 KV 显存。"""
+    """分组柱状图：每个工作流的 baseline vs optimized 进入 KV 的新 prefill token 数。
+
+    外部优化层（压缩 / 工具外置）的 KV 优化信号是 ``total_prefill_new_tokens``
+    （num_prompt_tokens - num_cached_tokens，即真正需要 prefill 进 KV 的 token）。
+    ``torch.cuda.max_memory_allocated`` 只反映 vLLM 预分配的固定 KV 池（≈11.6 GiB @
+    util=0.55，与优化无关），不作图。``peak_kv_used_gib`` 在外部层未填充，故用
+    new_prefill 作为 KV 进入量的代理（越小越好）。
+    """
     grouped = _group(results)
     workloads = sorted({k[0] for k in grouped})
     labels = sorted({k[1] for k in grouped})
@@ -53,14 +60,14 @@ def plot_kv_mem_comparison(
         vals = []
         for wl in workloads:
             r = grouped.get((wl, lab))
-            v = r.extra.get("peak_kv_used_gib") if r else None
+            v = r.extra.get("total_prefill_new_tokens") if r else None
             v = _maybe_float(v)
             vals.append(v if v is not None else 0.0)
         ax.bar([xi + (i - (len(labels) - 1) / 2) * width for xi in x], vals, width, label=lab)
 
     ax.set_xticks(list(x))
     ax.set_xticklabels(workloads, rotation=15, ha="right")
-    ax.set_ylabel("Peak KV Memory (GiB)")
+    ax.set_ylabel("new prefill tokens (into KV)")
     ax.set_title(title)
     ax.legend()
     fig.tight_layout()

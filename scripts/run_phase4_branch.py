@@ -82,7 +82,7 @@ def main() -> int:
         gpu_memory_utilization=args.gpu_memory_util,
         enable_prefix_caching=True,
         max_model_len=args.max_model_len,
-        use_v1=False,
+        use_v1=True,  # v1 + Phase R patch gives real TTFT (v0 RequestOutput.metrics is None)
     )
     eng = VLLMEngine(cfg, device=0)
     _ = eng.llm

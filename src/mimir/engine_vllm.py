@@ -174,6 +174,10 @@ class VLLMEngine:
         }
         if c.kv_cache_dtype:
             kwargs["kv_cache_dtype"] = c.kv_cache_dtype
+        # Keep the per-request stat pipeline alive so v1 (use_v1=True) reports
+        # RequestOutput.metrics (TTFT) via the Phase R patch. Stock LLM() force-
+        # disables log_stats. Harmless on v0.
+        kwargs.setdefault("disable_log_stats", False)
         kwargs.update(c.extra)
         t0 = time.perf_counter()
         self._llm = LLM(**kwargs)

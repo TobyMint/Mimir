@@ -57,7 +57,7 @@ def main() -> int:
         gpu_memory_utilization=args.gpu_memory_util,
         enable_prefix_caching=True,
         max_model_len=args.max_model_len,
-        use_v1=False,
+        use_v1=True,  # v1 + Phase R patch gives real TTFT (v0 RequestOutput.metrics is None)
     )
     eng = VLLMEngine(cfg, device=0)
     _ = eng.llm
@@ -73,8 +73,8 @@ def main() -> int:
         mem = m_base.peak_gpu_mem_alloc_gib
         cached = m_base.extra.get("total_cached_tokens")
         print(
-            f"  baseline: TTFT={m_base.ttft_ms:.1f}ms E2E={m_base.e2e_latency_s:.2f}s "
-            f"mem={mem:.2f}GiB cached={cached}",
+            f"  baseline: TTFT={m_base.ttft_ms!s} E2E={m_base.e2e_latency_s!s} "
+            f"mem={mem!s} cached={cached}",
             flush=True,
         )
         # compressed
@@ -91,8 +91,8 @@ def main() -> int:
         mem2 = m_opt.peak_gpu_mem_alloc_gib
         cached2 = m_opt.extra.get("total_cached_tokens")
         print(
-            f"  compressed: TTFT={m_opt.ttft_ms:.1f}ms E2E={m_opt.e2e_latency_s:.2f}s "
-            f"mem={mem2:.2f}GiB cached={cached2}",
+            f"  compressed: TTFT={m_opt.ttft_ms!s} E2E={m_opt.e2e_latency_s!s} "
+            f"mem={mem2!s} cached={cached2}",
             flush=True,
         )
         # Comparison
@@ -119,12 +119,12 @@ def main() -> int:
     plot_kv_mem_comparison(
         results,
         out_dir / f"phase2_context_{tag}_mem.png",
-        title=f"Phase 2 上下文Compress：PeakMemory ({fidelity.value})",
+        title=f"Phase 2 context-compress: Peak KV Memory ({fidelity.value})",
     )
     plot_latency_comparison(
         results,
         out_dir / f"phase2_context_{tag}_lat.png",
-        title=f"Phase 2 上下文Compress：Latency ({fidelity.value})",
+        title=f"Phase 2 context-compress: Latency ({fidelity.value})",
     )
     print(f"\n保存: {json_path}")
     print(f"保存: {out_dir / f'phase2_context_{tag}_mem.png'}")

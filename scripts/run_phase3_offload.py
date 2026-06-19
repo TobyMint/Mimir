@@ -54,7 +54,7 @@ def main() -> int:
         gpu_memory_utilization=args.gpu_memory_util,
         enable_prefix_caching=True,
         max_model_len=args.max_model_len,
-        use_v1=False,
+        use_v1=True,  # v1 + Phase R patch gives real TTFT (v0 RequestOutput.metrics is None)
     )
     eng = VLLMEngine(cfg, device=0)
     _ = eng.llm
@@ -70,8 +70,8 @@ def main() -> int:
         mem = m_base.peak_gpu_mem_alloc_gib
         cached = m_base.extra.get("total_cached_tokens")
         print(
-            f"  baseline: TTFT={m_base.ttft_ms:.1f}ms new_prefill="
-            f"{m_base.extra.get('total_prefill_new_tokens')} mem={mem:.2f}GiB cached={cached}",
+            f"  baseline: TTFT={m_base.ttft_ms!s} new_prefill="
+            f"{m_base.extra.get('total_prefill_new_tokens')} mem={mem!s} cached={cached}",
             flush=True,
         )
         # offload
@@ -83,8 +83,8 @@ def main() -> int:
         mem2 = m_opt.peak_gpu_mem_alloc_gib
         cached2 = m_opt.extra.get("total_cached_tokens")
         print(
-            f"  offload:  TTFT={m_opt.ttft_ms:.1f}ms new_prefill="
-            f"{m_opt.extra.get('total_prefill_new_tokens')} mem={mem2:.2f}GiB cached={cached2}",
+            f"  offload:  TTFT={m_opt.ttft_ms!s} new_prefill="
+            f"{m_opt.extra.get('total_prefill_new_tokens')} mem={mem2!s} cached={cached2}",
             flush=True,
         )
         st = store.stats()
@@ -115,10 +115,12 @@ def main() -> int:
     plot_kv_mem_comparison(
         results,
         out_dir / f"phase3_offload_{tag}_mem.png",
-        title="Phase 3 工具数据Offload：PeakMemory",
+        title="Phase 3 tool-data-offload: Peak KV Memory",
     )
     plot_latency_comparison(
-        results, out_dir / f"phase3_offload_{tag}_lat.png", title="Phase 3 工具数据Offload：Latency"
+        results,
+        out_dir / f"phase3_offload_{tag}_lat.png",
+        title="Phase 3 tool-data-offload: Latency",
     )
     print(f"\n保存: {json_path}")
     print(f"保存: {out_dir / f'phase3_offload_{tag}_mem.png'}")
