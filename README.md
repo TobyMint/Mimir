@@ -78,9 +78,9 @@ Mimir/
 > 该脚本幂等地：`conda activate mimir` → 写 `.pth`/dist-info → `LD_LIBRARY_PATH += torch/lib` → v1 单进程 env。
 
 ```bash
-# 0. 首次：准备预编译二进制（vllm_prebuilt_bin，gitignored）
-#    见 docs/VLLM_EDITABLE_SETUP.md §「接入预编译二进制」—— 从 vllm==0.10.2 wheel 提取 .so + flash_attn 包，
-#    symlink 进 third_party/vllm_flat/vllm/。
+# 0. 首次：重建 vLLM 预编译二进制（fresh clone 需此步，~1 分钟）
+bash scripts/setup_vllm_binaries.sh   # 从 vllm==0.10.2 wheel 提取 .so + flash_attn，symlink 进 vllm_flat
+#    （vllm_prebuilt_bin/ 被 gitignore，不入库；详见 docs/VLLM_EDITABLE_SETUP.md）
 
 # 1. conda 环境 mimir（python 3.11 + torch 2.8.0+cu128 + vllm 0.10.2 依赖）
 source /opt/miniconda3/etc/profile.d/conda.sh
