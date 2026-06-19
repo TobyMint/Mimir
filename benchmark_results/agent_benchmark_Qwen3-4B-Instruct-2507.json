@@ -18,9 +18,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 10,
-            "ttft_ms": 43.10345649719238,
+            "ttft_ms": 34.41643714904785,
             "new_prefill_tokens": 140,
-            "e2e_s": 1.059,
+            "e2e_s": 0.898,
             "context_msgs": 2
           },
           {
@@ -31,7 +31,7 @@
             "used_blocks": -1,
             "ttft_ms": null,
             "new_prefill_tokens": null,
-            "e2e_s": 0.016,
+            "e2e_s": 0.014,
             "context_msgs": 4
           }
         ]
@@ -51,9 +51,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 18,
-            "ttft_ms": 25.579452514648438,
+            "ttft_ms": 20.834922790527344,
             "new_prefill_tokens": 112,
-            "e2e_s": 0.333,
+            "e2e_s": 0.254,
             "context_msgs": 2
           },
           {
@@ -64,7 +64,7 @@
             "used_blocks": -1,
             "ttft_ms": null,
             "new_prefill_tokens": null,
-            "e2e_s": 0.02,
+            "e2e_s": 0.013,
             "context_msgs": 4
           }
         ]
@@ -84,9 +84,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 27,
-            "ttft_ms": 41.69631004333496,
+            "ttft_ms": 30.543804168701172,
             "new_prefill_tokens": 133,
-            "e2e_s": 0.441,
+            "e2e_s": 0.319,
             "context_msgs": 2
           },
           {
@@ -97,7 +97,7 @@
             "used_blocks": -1,
             "ttft_ms": null,
             "new_prefill_tokens": null,
-            "e2e_s": 0.03,
+            "e2e_s": 0.015,
             "context_msgs": 4
           }
         ]
@@ -121,9 +121,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 48.25615882873535,
+            "ttft_ms": 34.436702728271484,
             "new_prefill_tokens": 140,
-            "e2e_s": 1.163,
+            "e2e_s": 0.862,
             "context_msgs": 2
           },
           {
@@ -132,9 +132,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 67.01111793518066,
+            "ttft_ms": 50.21810531616211,
             "new_prefill_tokens": 261,
-            "e2e_s": 0.614,
+            "e2e_s": 0.425,
             "context_msgs": 4
           },
           {
@@ -143,9 +143,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 68.17770004272461,
+            "ttft_ms": 50.060272216796875,
             "new_prefill_tokens": 384,
-            "e2e_s": 0.538,
+            "e2e_s": 0.399,
             "context_msgs": 6
           },
           {
@@ -154,9 +154,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 83.55903625488281,
+            "ttft_ms": 62.03436851501465,
             "new_prefill_tokens": 511,
-            "e2e_s": 0.493,
+            "e2e_s": 0.36,
             "context_msgs": 8
           },
           {
@@ -165,9 +165,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 118.44730377197266,
+            "ttft_ms": 86.64679527282715,
             "new_prefill_tokens": 630,
-            "e2e_s": 0.646,
+            "e2e_s": 0.488,
             "context_msgs": 10
           },
           {
@@ -176,9 +176,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 145.6613540649414,
+            "ttft_ms": 98.01459312438965,
             "new_prefill_tokens": 760,
-            "e2e_s": 0.603,
+            "e2e_s": 0.411,
             "context_msgs": 12
           },
           {
@@ -187,9 +187,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 150.5577564239502,
+            "ttft_ms": 113.01136016845703,
             "new_prefill_tokens": 881,
-            "e2e_s": 0.628,
+            "e2e_s": 0.44,
             "context_msgs": 14
           },
           {
@@ -198,9 +198,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 177.11591720581055,
+            "ttft_ms": 122.02572822570801,
             "new_prefill_tokens": 1009,
-            "e2e_s": 0.673,
+            "e2e_s": 0.501,
             "context_msgs": 16
           }
         ]
@@ -220,9 +220,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 28.731107711791992,
+            "ttft_ms": 20.044326782226562,
             "new_prefill_tokens": 112,
-            "e2e_s": 0.352,
+            "e2e_s": 0.248,
             "context_msgs": 2
           },
           {
@@ -231,9 +231,9 @@
             "tool_called": "search",
             "tool_result_bytes": 20386,
             "used_blocks": 0,
-            "ttft_ms": 46.334028244018555,
+            "ttft_ms": 31.414031982421875,
             "new_prefill_tokens": 229,
-            "e2e_s": 0.339,
+            "e2e_s": 0.238,
             "context_msgs": 4
           },
           {
@@ -242,9 +242,9 @@
             "tool_called": "search",
             "tool_result_bytes": 19186,
             "used_blocks": 0,
-            "ttft_ms": 62.31355667114258,
+            "ttft_ms": 46.62942886352539,
             "new_prefill_tokens": 343,
-            "e2e_s": 0.285,
+            "e2e_s": 0.215,
             "context_msgs": 6
           },
           {
@@ -253,9 +253,9 @@
             "tool_called": "search",
             "tool_result_bytes": 18436,
             "used_blocks": 0,
-            "ttft_ms": 88.28330039978027,
+            "ttft_ms": 61.46049499511719,
             "new_prefill_tokens": 453,
-            "e2e_s": 0.323,
+            "e2e_s": 0.232,
             "context_msgs": 8
           },
           {
@@ -264,9 +264,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 114.05420303344727,
+            "ttft_ms": 81.32767677307129,
             "new_prefill_tokens": 563,
-            "e2e_s": 1.823,
+            "e2e_s": 1.304,
             "context_msgs": 10
           },
           {
@@ -275,9 +275,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 143.7082290649414,
+            "ttft_ms": 96.59838676452637,
             "new_prefill_tokens": 664,
-            "e2e_s": 1.901,
+            "e2e_s": 1.313,
             "context_msgs": 11
           }
         ]
@@ -297,9 +297,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 38.42282295227051,
+            "ttft_ms": 29.71506118774414,
             "new_prefill_tokens": 133,
-            "e2e_s": 0.452,
+            "e2e_s": 0.309,
             "context_msgs": 2
           },
           {
@@ -308,9 +308,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 49.626827239990234,
+            "ttft_ms": 31.666994094848633,
             "new_prefill_tokens": 250,
-            "e2e_s": 0.411,
+            "e2e_s": 0.291,
             "context_msgs": 4
           },
           {
@@ -319,9 +319,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 67.09909439086914,
+            "ttft_ms": 47.62625694274902,
             "new_prefill_tokens": 364,
-            "e2e_s": 0.464,
+            "e2e_s": 0.332,
             "context_msgs": 6
           },
           {
@@ -330,9 +330,9 @@
             "tool_called": "search",
             "tool_result_bytes": 20836,
             "used_blocks": 0,
-            "ttft_ms": 89.58888053894043,
+            "ttft_ms": 61.3551139831543,
             "new_prefill_tokens": 484,
-            "e2e_s": 0.432,
+            "e2e_s": 0.309,
             "context_msgs": 8
           },
           {
@@ -341,9 +341,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 120.38326263427734,
+            "ttft_ms": 85.89720726013184,
             "new_prefill_tokens": 601,
-            "e2e_s": 0.501,
+            "e2e_s": 0.358,
             "context_msgs": 10
           },
           {
@@ -352,9 +352,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 133.89325141906738,
+            "ttft_ms": 97.53751754760742,
             "new_prefill_tokens": 719,
-            "e2e_s": 0.481,
+            "e2e_s": 0.345,
             "context_msgs": 12
           },
           {
@@ -363,9 +363,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 147.06659317016602,
+            "ttft_ms": 113.37518692016602,
             "new_prefill_tokens": 836,
-            "e2e_s": 0.559,
+            "e2e_s": 0.388,
             "context_msgs": 14
           },
           {
@@ -374,9 +374,9 @@
             "tool_called": "search",
             "tool_result_bytes": 20686,
             "used_blocks": 0,
-            "ttft_ms": 176.89990997314453,
+            "ttft_ms": 122.03383445739746,
             "new_prefill_tokens": 953,
-            "e2e_s": 0.502,
+            "e2e_s": 0.36,
             "context_msgs": 16
           },
           {
@@ -385,9 +385,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 202.96454429626465,
+            "ttft_ms": 150.45547485351562,
             "new_prefill_tokens": 1073,
-            "e2e_s": 0.576,
+            "e2e_s": 0.4,
             "context_msgs": 18
           },
           {
@@ -396,9 +396,9 @@
             "tool_called": "search",
             "tool_result_bytes": 21286,
             "used_blocks": 0,
-            "ttft_ms": 235.46576499938965,
+            "ttft_ms": 160.0489616394043,
             "new_prefill_tokens": 1191,
-            "e2e_s": 0.596,
+            "e2e_s": 0.41,
             "context_msgs": 20
           }
         ]
@@ -415,12 +415,12 @@
       "mimir_steps": 8,
       "native_crashed": true,
       "crash_reason": "(crashed: The decoder prompt (length 5186) is longer than the maximum model length of 4096. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
-      "native_avg_ttft_ms": 43.1,
-      "mimir_avg_ttft_ms": 107.3,
+      "native_avg_ttft_ms": 34.4,
+      "mimir_avg_ttft_ms": 77.1,
       "matched_steps": 1,
-      "native_matched_ttft_ms": 43.1,
-      "mimir_matched_ttft_ms": 48.3,
-      "matched_ttft_change_pct": 12.1,
+      "native_matched_ttft_ms": 34.4,
+      "mimir_matched_ttft_ms": 34.4,
+      "matched_ttft_change_pct": 0.0,
       "mimir_last_new_prefill_tokens": 1009,
       "native_final": "(crashed: The decoder prompt (length 5186) is longer than the maximum model leng",
       "mimir_final": "(max steps reached without final answer)"
@@ -434,12 +434,12 @@
       "mimir_steps": 6,
       "native_crashed": true,
       "crash_reason": "(crashed: The decoder prompt (length 5149) is longer than the maximum model length of 4096. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
-      "native_avg_ttft_ms": 25.6,
-      "mimir_avg_ttft_ms": 80.6,
+      "native_avg_ttft_ms": 20.8,
+      "mimir_avg_ttft_ms": 56.2,
       "matched_steps": 1,
-      "native_matched_ttft_ms": 25.6,
-      "mimir_matched_ttft_ms": 28.7,
-      "matched_ttft_change_pct": 12.1,
+      "native_matched_ttft_ms": 20.8,
+      "mimir_matched_ttft_ms": 20.0,
+      "matched_ttft_change_pct": -3.8,
       "mimir_last_new_prefill_tokens": 664,
       "native_final": "(crashed: The decoder prompt (length 5149) is longer than the maximum model leng",
       "mimir_final": "(max steps reached without final answer)"
@@ -453,12 +453,12 @@
       "mimir_steps": 10,
       "native_crashed": true,
       "crash_reason": "(crashed: The decoder prompt (length 5574) is longer than the maximum model length of 4096. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
-      "native_avg_ttft_ms": 41.7,
-      "mimir_avg_ttft_ms": 126.1,
+      "native_avg_ttft_ms": 30.5,
+      "mimir_avg_ttft_ms": 90.0,
       "matched_steps": 1,
-      "native_matched_ttft_ms": 41.7,
-      "mimir_matched_ttft_ms": 38.4,
-      "matched_ttft_change_pct": -7.9,
+      "native_matched_ttft_ms": 30.5,
+      "mimir_matched_ttft_ms": 29.7,
+      "matched_ttft_change_pct": -2.6,
       "mimir_last_new_prefill_tokens": 1191,
       "native_final": "(crashed: The decoder prompt (length 5574) is longer than the maximum model leng",
       "mimir_final": "(max steps reached without final answer)"

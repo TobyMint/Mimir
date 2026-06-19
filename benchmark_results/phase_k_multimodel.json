@@ -1,32 +1,31 @@
 {
   "phase": "K",
   "description": "Multi-model scale generalization: Mimir vLLM in-tree patches work across Qwen3-1.7B/4B/8B",
-  "gpu": "GPU 2 (NVIDIA GeForce RTX 3090)",
+  "gpu": "GPU 0 (NVIDIA GeForce RTX 3090)",
   "results": [
     {
       "model": "Qwen3-1.7B",
       "total_blocks": 3485,
-      "lifecycle_used_before": 3,
+      "lifecycle_used_before": 5,
       "lifecycle_used_after": 0,
-      "lifecycle_reclaims": 3,
+      "lifecycle_reclaims": 5,
       "cow_reuses": 3,
       "patch_works": true
     },
     {
       "model": "Qwen3-4B-Instruct-2507",
       "total_blocks": 707,
-      "lifecycle_used_before": 3,
+      "lifecycle_used_before": 5,
       "lifecycle_used_after": 0,
-      "lifecycle_reclaims": 3,
+      "lifecycle_reclaims": 5,
       "cow_reuses": 3,
       "patch_works": true
     },
     {
       "model": "Qwen3-8B",
-      "status": "hardware_limit",
-      "note": "8B bf16 weights (~16GB) + activation leave no room for KV blocks on RTX 3090 (24GB) at shared-GPU contention. Not a patch issue — the in-tree patches are model-agnostic pure-Python (no scale-specific code). 1.7B+4B verified."
+      "status": "error",
+      "error": "ARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())\n"
     }
   ],
-  "all_patch_works": true,
-  "note": "8B excluded due to 3090 VRAM limit (not patch-related); 1.7B and 4B both confirm lifecycle reclaim + CoW reuse generalize."
+  "all_patch_works": false
 }

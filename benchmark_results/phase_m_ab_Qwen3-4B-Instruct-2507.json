@@ -1,140 +1,139 @@
 {
   "model": "Qwen3-4B-Instruct-2507",
   "baseline": {
-    "final_used_blocks": 69,
+    "final_used_blocks": 74,
     "final_reclaims": 0,
     "rows": [
       {
         "turn": 1,
-        "used_blocks": 7,
+        "used_blocks": 8,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 2,
-        "used_blocks": 14,
+        "used_blocks": 15,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 3,
-        "used_blocks": 22,
+        "used_blocks": 23,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 4,
-        "used_blocks": 28,
+        "used_blocks": 30,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 5,
-        "used_blocks": 35,
+        "used_blocks": 38,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 6,
-        "used_blocks": 42,
+        "used_blocks": 45,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 7,
-        "used_blocks": 49,
+        "used_blocks": 52,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 8,
-        "used_blocks": 56,
+        "used_blocks": 60,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 9,
-        "used_blocks": 62,
+        "used_blocks": 67,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       },
       {
         "turn": 10,
-        "used_blocks": 69,
+        "used_blocks": 74,
         "lifecycle_reclaims": 0,
-        "out_tokens": 12
+        "out_tokens": 20
       }
     ]
   },
   "mimir": {
     "final_used_blocks": 0,
-    "final_reclaims": 213,
+    "final_reclaims": 239,
     "rows": [
       {
         "turn": 1,
         "used_blocks": 0,
-        "lifecycle_reclaims": 7,
-        "out_tokens": 12
+        "lifecycle_reclaims": 8,
+        "out_tokens": 20
       },
       {
         "turn": 2,
         "used_blocks": 0,
-        "lifecycle_reclaims": 21,
-        "out_tokens": 12
+        "lifecycle_reclaims": 23,
+        "out_tokens": 20
       },
       {
         "turn": 3,
         "used_blocks": 0,
-        "lifecycle_reclaims": 38,
-        "out_tokens": 12
+        "lifecycle_reclaims": 41,
+        "out_tokens": 20
       },
       {
         "turn": 4,
         "used_blocks": 0,
-        "lifecycle_reclaims": 57,
-        "out_tokens": 12
+        "lifecycle_reclaims": 62,
+        "out_tokens": 20
       },
       {
         "turn": 5,
         "used_blocks": 0,
-        "lifecycle_reclaims": 78,
-        "out_tokens": 12
+        "lifecycle_reclaims": 85,
+        "out_tokens": 20
       },
       {
         "turn": 6,
         "used_blocks": 0,
-        "lifecycle_reclaims": 101,
-        "out_tokens": 12
+        "lifecycle_reclaims": 111,
+        "out_tokens": 20
       },
       {
         "turn": 7,
         "used_blocks": 0,
-        "lifecycle_reclaims": 126,
-        "out_tokens": 12
+        "lifecycle_reclaims": 139,
+        "out_tokens": 20
       },
       {
         "turn": 8,
         "used_blocks": 0,
-        "lifecycle_reclaims": 153,
-        "out_tokens": 12
+        "lifecycle_reclaims": 170,
+        "out_tokens": 20
       },
       {
         "turn": 9,
         "used_blocks": 0,
-        "lifecycle_reclaims": 182,
-        "out_tokens": 12
+        "lifecycle_reclaims": 203,
+        "out_tokens": 20
       },
       {
         "turn": 10,
         "used_blocks": 0,
-        "lifecycle_reclaims": 213,
-        "out_tokens": 12
+        "lifecycle_reclaims": 239,
+        "out_tokens": 20
       }
     ]
   },
   "comparison": {
-    "used_blocks_baseline_vs_mimir": "69 vs 0",
-    "lifecycle_reclaims_baseline_vs_mimir": "0 vs 213"
-  },
-  "headline_result": "Mimir holds used_blocks=0 (reclaims=213) vs native 69 (reclaims=0) across 10 turns."
+    "used_blocks_baseline_vs_mimir": "74 vs 0",
+    "lifecycle_reclaims_baseline_vs_mimir": "0 vs 239"
+  }
 }

@@ -6,5 +6,5 @@
   "reclaim_evictable_swept": 0,
   "final_used_blocks": 0,
   "total_mimir_lifecycle_reclaims": 3,
-  "interpretation": "mimir_reclaim_evictable closes the loop: blocks that finish_task could not immediately free (still referenced) get marked EVICTABLE and are swept at the pressure point."
+  "interpretation": "mimir_reclaim_evictable closes the loop: finish_task marks still-referenced blocks EVICTABLE; reclaim sweeps them at pressure points."
 }
