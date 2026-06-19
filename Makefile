@@ -1,4 +1,4 @@
-.PHONY: help install dev-install test test-fast lint format typecheck benchmark clean
+.PHONY: help install dev-install test test-fast lint format typecheck benchmark clean reproduce
 
 reproduce: ## 一键复现（环境+测试+仿真+GPU验证）
 	bash scripts/reproduce.sh
