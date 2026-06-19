@@ -1,0 +1,8 @@
+{
+  "phase": "L",
+  "date": "2026-06-19",
+  "feature": "auto-reclaim in mimir scheduling policy (self-driving)",
+  "result": "PHASE_L_OK — auto_reclaim_works=True",
+  "evidence": "scheduling_policy=mimir, no explicit mimir_finish_task call; after task completion, scheduler._free_blocks auto-triggers block_pool.mimir_finish_task (reclaims=2)",
+  "value": "mimir policy is now self-driving — agent tasks auto-reclaim KV on completion without external Mimir API calls. fcfs/priority unaffected."
+}

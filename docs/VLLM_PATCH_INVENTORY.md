@@ -28,6 +28,7 @@ cd third_party/vllm && git checkout mimir-patches-v0.10.2   # Mimir patch 分支
 | G | `vllm/v1/core/sched/request_queue.py` | `SchedulingPolicy.MIMIR` + `MimirRequestQueue`（FCFS 子类） | — |
 | G | `vllm/v1/core/sched/scheduler.py` | 调度策略分发 `"mimir"` → `SchedulingPolicy.MIMIR` + 日志 | 引擎日志 "Mimir scheduling policy active" |
 | J | `vllm/v1/core/block_pool.py` | `mimir_reclaim_evictable()` 主动扫描回收所有 EVICTABLE 块（闭环：finish_task 标记 + reclaim 扫描） | 验证：finish_task 回收 3 块 used 3→0 |
+| L | `vllm/v1/core/sched/scheduler.py` | mimir 策略下 `_free_blocks` 自动调 `mimir_finish_task`（任务完成即回收，自驱动） | auto_reclaim_works=True（reclaims=2，无需外部调用） |
 
 ## 与同实验室 Continuum 的区别
 
