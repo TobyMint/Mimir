@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Phase M：整合 A/B — 原生 vLLM baseline vs Mimir 全管线（patched v1）。
 
 10 轮多轮 agent 对话：
@@ -20,7 +21,6 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mimir.engine_vllm import EngineConfig
 from mimir.engine_vllm_v1 import VLLMEngineV1
 from mimir.gpu import as_env, pick_least_busy_gpu
 
@@ -89,45 +89,54 @@ def main() -> int:
     os.environ.update(as_env(g))
     print(f"GPU {g.index}", flush=True)
 
-    # baseline：原生 fcfs，不压缩
-    print("\n=== baseline（原生 vLLM，fcfs，不压缩）===", flush=True)
-    eng_b = VLLMEngineV1(
-        EngineConfig(
-            model=args.model,
-            dtype="bfloat16",
-            gpu_memory_utilization=args.gpu_memory_util,
-            enable_prefix_caching=True,
-            max_model_len=args.max_model_len,
-            extra={"scheduling_policy": "fcfs"},
-        ),
-        device=0,
-    )
-    _ = eng_b.llm
-    base_rows = run_ab(eng_b, compress=False, label="baseline", max_tokens=args.max_tokens)
-    print(
-        f"  baseline final: used={base_rows[-1]['used_blocks']} reclaims={base_rows[-1]['lifecycle_reclaims']}",
-        flush=True,
-    )
+    import subprocess
 
-    # Mimir：mimir 策略 + 压缩
-    print("\n=== Mimir（patched v1，mimir 策略 + 上下文压缩）===", flush=True)
-    eng_m = VLLMEngineV1(
-        EngineConfig(
-            model=args.model,
-            dtype="bfloat16",
-            gpu_memory_utilization=args.gpu_memory_util,
-            enable_prefix_caching=True,
-            max_model_len=args.max_model_len,
-            extra={"scheduling_policy": "mimir"},
-        ),
-        device=0,
-    )
-    _ = eng_m.llm
-    mimir_rows = run_ab(eng_m, compress=True, label="mimir", max_tokens=args.max_tokens)
-    print(
-        f"  Mimir final: used={mimir_rows[-1]['used_blocks']} reclaims={mimir_rows[-1]['lifecycle_reclaims']}",
-        flush=True,
-    )
+    CHILD = r"""
+import os, json, sys
+sys.path.insert(0, os.getcwd())
+from mimir.engine_vllm import EngineConfig
+from mimir.engine_vllm_v1 import VLLMEngineV1
+model, gpu, util, mlen, mtok, policy, compress = sys.argv[1], sys.argv[2], float(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), sys.argv[6], sys.argv[7]=="1"
+os.environ["CUDA_VISIBLE_DEVICES"] = gpu
+eng = VLLMEngineV1(EngineConfig(model=model, dtype="bfloat16", gpu_memory_utilization=util,
+    enable_prefix_caching=True, max_model_len=mlen, extra={"scheduling_policy": policy}), device=0)
+_ = eng.llm
+SYS = "You are a research agent answering about KV cache memory management. Be concise."
+QS = ["What is prefix caching?","How does KV reuse save memory?","Estimate KV for 7B at 32k in fp16.",
+      "What is Copy-on-Write for branches?","How does tiered storage help?","What is lifecycle-aware eviction?",
+      "Why offload tool results?","Compare LRU vs lifecycle eviction.","What is fp8 KV quantization?",
+      "Summarize agent memory management."]
+hist = [{"role":"system","content":SYS}]
+rows = []
+for i, q in enumerate(QS):
+    hist.append({"role":"user","content":q})
+    if compress and i >= 2:
+        kf = len(hist)-4 if len(hist)>4 else 0
+        old, recent = hist[:kf], hist[kf:]
+        old = [{"role":m["role"],"content":(m["content"][:40]+"…" if m["role"]=="user" and len(m["content"])>40 else m["content"])} for m in old]
+        hist = old + recent
+    txt, n = eng.chat(list(hist), max_tokens=mtok, temperature=0.0)
+    st = eng.mimir_stats()
+    rows.append({"turn":i+1,"used_blocks":st.get("used_blocks"),"lifecycle_reclaims":st.get("mimir_lifecycle_reclaims"),"out_tokens":n})
+    hist.append({"role":"assistant","content":txt[:60]})
+print("RESULT_JSON:"+json.dumps(rows))
+"""
+
+    def run_side(policy: str, compress: bool, label: str):
+        print(f"\n=== {label} ===", flush=True)
+        r = subprocess.run(["python","-c",CHILD, args.model, str(g.index), str(args.gpu_memory_util),
+                            str(args.max_model_len), str(args.max_tokens), policy, "1" if compress else "0"],
+                           capture_output=True, text=True, env=dict(os.environ), timeout=300)
+        for line in r.stdout.splitlines():
+            if line.startswith("RESULT_JSON:"):
+                rows = json.loads(line[len("RESULT_JSON:"):])
+                print(f"  {label} final: used={rows[-1]['used_blocks']} reclaims={rows[-1]['lifecycle_reclaims']}", flush=True)
+                return rows
+        print(f"  {label} ERROR: {r.stderr[-200:]}", flush=True)
+        return []
+
+    base_rows = run_side("fcfs", False, "baseline (native vLLM, fcfs)")
+    mimir_rows = run_side("mimir", True, "Mimir (mimir policy + compress)")
 
     b_final = base_rows[-1]
     m_final = mimir_rows[-1]
