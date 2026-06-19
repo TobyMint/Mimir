@@ -2,7 +2,7 @@
 
 > **续上时先读本文件。** 记录当前阶段、已完成、进行中、阻塞、下一步、环境与 GPU 选择。
 
-**当前阶段**：Phase A-K 全部完成（A-I vLLM patch + J reclaim_evictable 闭环 + K 多模型泛化 1.7B/4B 验证）。92 测试通过。
+**当前阶段**：Phase A-M 全部完成。vLLM v0.10.2 in-tree patch（10 文件）+ 多模型泛化 + 决定性 A/B（Mimir used=0 vs 原生 69）。92 测试通过。
 
 **最后更新**：2026-06-18
 
