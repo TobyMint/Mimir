@@ -2,7 +2,10 @@
 
 > Mimir 取名自北欧神话中以智慧与记忆闻名者，寓意本项目聚焦于智能体推理过程中**记忆（KV Cache / 上下文）的管理与复用**。
 >
-> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — 两个决定性 A/B（used_blocks 69&14→0）、-91% TTFT、CoW -78.7%、多模型泛化。
+> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — 四个决定性引擎级 A/B（used_blocks 69 / 14 / 27 / **262** → 0）、tool_call TTFT **-91%**、分支 CoW **-78.7%**、多模型泛化。
+>
+> 🔥 **最强一击（Phase Q，工具调用并发）**：3 个 agent × 2 轮工具调用（每轮含 ~5KB 工具返回），原生 vLLM KV 累积到 **262 块**，Mimir（工具外置 + 逐任务自动回收）保持 **0 块**（reclaims=42）。\
+> ![Phase Q 工具调用并发 A/B](benchmark_results/phase_q_toolcall_concurrent_Qwen3-4B-Instruct-2507_curves.png)
 
 <p align="center">
   <b>研究创新赛道 · 面向智能体的内存管理系统设计与实现（高校赛题）</b>
