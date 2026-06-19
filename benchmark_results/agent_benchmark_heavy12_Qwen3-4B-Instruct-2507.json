@@ -1,0 +1,610 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "tool_kb": 2,
+  "native": {
+    "results": [
+      {
+        "label": "research_kv_cache_fcfs",
+        "policy": "fcfs",
+        "tool_offload": false,
+        "num_steps": 5,
+        "peak_used_blocks": 156,
+        "total_tool_data_bytes": 8562,
+        "final_answer": "The peak KV cache memory for a 7B model with a 32k context in fp16 is approximately 28 GB.",
+        "steps": [
+          {
+            "step": 0,
+            "text": "[TOOL: search('KV cache memory management in LLM inference 7B model 32k context fp16')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 10,
+            "ttft_ms": 40.26913642883301,
+            "new_prefill_tokens": 140,
+            "e2e_s": 1.302,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "The search results are not providing specific or actionable details about KV cache memory management",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 141,
+            "ttft_ms": 339.9789333343506,
+            "new_prefill_tokens": 2011,
+            "e2e_s": 2.124,
+            "context_msgs": 4
+          },
+          {
+            "step": 2,
+            "text": "[TOOL: calculator('2 * 7 * 1024 * 1024 * 2 / 1024 / 1024')]",
+            "tool_called": "calculator",
+            "tool_result_bytes": 71,
+            "used_blocks": 144,
+            "ttft_ms": 27.22311019897461,
+            "new_prefill_tokens": 16,
+            "e2e_s": 0.739,
+            "context_msgs": 5
+          },
+          {
+            "step": 3,
+            "text": "The peak KV cache memory for a 7B model with a 32k context in fp16 is approximately **28 GB**.\n\n### ",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 153,
+            "ttft_ms": 26.42345428466797,
+            "new_prefill_tokens": 64,
+            "e2e_s": 1.784,
+            "context_msgs": 7
+          },
+          {
+            "step": 4,
+            "text": "[FINAL: The peak KV cache memory for a 7B model with a 32k context in fp16 is approximately 28 GB.]",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 156,
+            "ttft_ms": 26.189327239990234,
+            "new_prefill_tokens": 21,
+            "e2e_s": 0.659,
+            "context_msgs": 8
+          }
+        ]
+      },
+      {
+        "label": "compare_frameworks_fcfs",
+        "policy": "fcfs",
+        "tool_offload": false,
+        "num_steps": 2,
+        "peak_used_blocks": 295,
+        "total_tool_data_bytes": 8491,
+        "final_answer": "The search results provided do not contain specific, actionable details about the memory efficiency or agent support of vLLM and llama.cpp. All snippets are repetitive and lack meaningful content, mak",
+        "steps": [
+          {
+            "step": 0,
+            "text": "[TOOL: search('vLLM vs llama.cpp memory efficiency and agent support')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 164,
+            "ttft_ms": 27.405738830566406,
+            "new_prefill_tokens": 112,
+            "e2e_s": 0.33,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "[FINAL: The search results provided do not contain specific, actionable details about the memory eff",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 295,
+            "ttft_ms": 336.5662097930908,
+            "new_prefill_tokens": 2006,
+            "e2e_s": 2.016,
+            "context_msgs": 4
+          }
+        ]
+      },
+      {
+        "label": "multi_step_estimate_fcfs",
+        "policy": "fcfs",
+        "tool_offload": false,
+        "num_steps": 4,
+        "peak_used_blocks": 447,
+        "total_tool_data_bytes": 16502,
+        "final_answer": "(crashed: The decoder prompt (length 4563) is longer than the maximum model length of 4096. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "[TOOL: search('4B model agent GPU memory requirements 24GB context 8k')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 304,
+            "ttft_ms": 41.56208038330078,
+            "new_prefill_tokens": 133,
+            "e2e_s": 0.491,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "The search results are not providing specific or actionable data on the GPU memory requirements for ",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 445,
+            "ttft_ms": 365.5703067779541,
+            "new_prefill_tokens": 2175,
+            "e2e_s": 2.114,
+            "context_msgs": 4
+          },
+          {
+            "step": 2,
+            "text": "[TOOL: search('4B parameter LLM GPU memory per context 8k')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8011,
+            "used_blocks": 447,
+            "ttft_ms": 22.33099937438965,
+            "new_prefill_tokens": 20,
+            "e2e_s": 0.397,
+            "context_msgs": 5
+          },
+          {
+            "step": 3,
+            "text": "[CRASHED]",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": -1,
+            "ttft_ms": null,
+            "new_prefill_tokens": null,
+            "e2e_s": 0.022,
+            "context_msgs": 7
+          }
+        ]
+      }
+    ]
+  },
+  "mimir": {
+    "results": [
+      {
+        "label": "research_kv_cache_mimir",
+        "policy": "mimir",
+        "tool_offload": true,
+        "num_steps": 12,
+        "peak_used_blocks": 0,
+        "total_tool_data_bytes": 84910,
+        "final_answer": "(max steps reached without final answer)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "[TOOL: search('KV cache memory management in LLM inference 7B model 32k context fp16')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 45.49694061279297,
+            "new_prefill_tokens": 140,
+            "e2e_s": 1.152,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "[TOOL: search('KV cache memory management in LLM inference 7B model 32k context fp16 memory calculat",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 70.86730003356934,
+            "new_prefill_tokens": 261,
+            "e2e_s": 0.598,
+            "context_msgs": 4
+          },
+          {
+            "step": 2,
+            "text": "[TOOL: search('memory footprint of KV cache for 7B parameter LLM with 32k context in fp16')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 73.17709922790527,
+            "new_prefill_tokens": 384,
+            "e2e_s": 0.584,
+            "context_msgs": 6
+          },
+          {
+            "step": 3,
+            "text": "[TOOL: search('KV cache memory calculation 7B model 32k context fp16 per token')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 88.16719055175781,
+            "new_prefill_tokens": 508,
+            "e2e_s": 0.547,
+            "context_msgs": 8
+          },
+          {
+            "step": 4,
+            "text": "[TOOL: search('how much memory does a 7B LLM use for KV cache with 32k context in fp16')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 132.34925270080566,
+            "new_prefill_tokens": 625,
+            "e2e_s": 0.686,
+            "context_msgs": 10
+          },
+          {
+            "step": 5,
+            "text": "[TOOL: search('KV cache memory per token 7B model fp16 32k context')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 137.3741626739502,
+            "new_prefill_tokens": 752,
+            "e2e_s": 0.546,
+            "context_msgs": 12
+          },
+          {
+            "step": 6,
+            "text": "[TOOL: search('memory calculation for KV cache 7B model 32k context fp16 per sequence')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 156.88443183898926,
+            "new_prefill_tokens": 874,
+            "e2e_s": 0.618,
+            "context_msgs": 14
+          },
+          {
+            "step": 7,
+            "text": "[TOOL: search('KV cache memory size 7B model 32k context fp16 detailed calculation')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 161.52620315551758,
+            "new_prefill_tokens": 989,
+            "e2e_s": 0.616,
+            "context_msgs": 16
+          },
+          {
+            "step": 8,
+            "text": "[TOOL: search('KV cache memory per token 7B model fp16 32k context formula')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 212.82386779785156,
+            "new_prefill_tokens": 1107,
+            "e2e_s": 0.637,
+            "context_msgs": 18
+          },
+          {
+            "step": 9,
+            "text": "[TOOL: search('memory footprint of KV cache for 7B model 32k context in fp16 per token')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 225.04115104675293,
+            "new_prefill_tokens": 1230,
+            "e2e_s": 0.719,
+            "context_msgs": 20
+          },
+          {
+            "step": 10,
+            "text": "After multiple attempts to retrieve specific technical details on KV cache memory management and cal",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 240.45658111572266,
+            "new_prefill_tokens": 1351,
+            "e2e_s": 1.956,
+            "context_msgs": 22
+          },
+          {
+            "step": 11,
+            "text": "The KV cache memory footprint for a 7B LLM with a 32k context length in fp16 can be estimated as fol",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 252.9275417327881,
+            "new_prefill_tokens": 1452,
+            "e2e_s": 1.922,
+            "context_msgs": 23
+          }
+        ]
+      },
+      {
+        "label": "compare_frameworks_mimir",
+        "policy": "mimir",
+        "tool_offload": true,
+        "num_steps": 12,
+        "peak_used_blocks": 0,
+        "total_tool_data_bytes": 32584,
+        "final_answer": "(max steps reached without final answer)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "[TOOL: search('vLLM vs llama.cpp memory efficiency and agent support')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 35.715341567993164,
+            "new_prefill_tokens": 112,
+            "e2e_s": 0.338,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "[TOOL: search('vLLM memory efficiency compared to llama.cpp')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8131,
+            "used_blocks": 0,
+            "ttft_ms": 43.520450592041016,
+            "new_prefill_tokens": 227,
+            "e2e_s": 0.33,
+            "context_msgs": 4
+          },
+          {
+            "step": 2,
+            "text": "[TOOL: search('llama.cpp agent support capabilities')]",
+            "tool_called": "search",
+            "tool_result_bytes": 7651,
+            "used_blocks": 0,
+            "ttft_ms": 63.05432319641113,
+            "new_prefill_tokens": 339,
+            "e2e_s": 0.298,
+            "context_msgs": 6
+          },
+          {
+            "step": 3,
+            "text": "[TOOL: search('vLLM agent support and integration capabilities')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8311,
+            "used_blocks": 0,
+            "ttft_ms": 86.54665946960449,
+            "new_prefill_tokens": 447,
+            "e2e_s": 0.339,
+            "context_msgs": 8
+          },
+          {
+            "step": 4,
+            "text": "[FINAL: Based on the available search results, here is a comparison of vLLM and llama.cpp in terms o",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 107.62500762939453,
+            "new_prefill_tokens": 559,
+            "e2e_s": 1.819,
+            "context_msgs": 10
+          },
+          {
+            "step": 5,
+            "text": "[FINAL: Based on the available search results, here is a comparison of vLLM and llama.cpp in terms o",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 128.41486930847168,
+            "new_prefill_tokens": 660,
+            "e2e_s": 1.759,
+            "context_msgs": 11
+          },
+          {
+            "step": 6,
+            "text": "[FINAL: Based on the available search results, here is a comparison of vLLM and llama.cpp in terms o",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 157.2110652923584,
+            "new_prefill_tokens": 777,
+            "e2e_s": 1.845,
+            "context_msgs": 13
+          },
+          {
+            "step": 7,
+            "text": "[FINAL: Based on the available search results, here is a comparison of vLLM and llama.cpp in terms o",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 164.94011878967285,
+            "new_prefill_tokens": 894,
+            "e2e_s": 1.815,
+            "context_msgs": 15
+          },
+          {
+            "step": 8,
+            "text": "[FINAL: Based on the available search results, here is a comparison of vLLM and llama.cpp in terms o",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 166.02039337158203,
+            "new_prefill_tokens": 1011,
+            "e2e_s": 1.858,
+            "context_msgs": 17
+          },
+          {
+            "step": 9,
+            "text": "[FINAL: Based on the available search results, here is a comparison of vLLM and llama.cpp in terms o",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 213.01007270812988,
+            "new_prefill_tokens": 1128,
+            "e2e_s": 1.939,
+            "context_msgs": 19
+          },
+          {
+            "step": 10,
+            "text": "[FINAL: Based on the available search results, here is a comparison of vLLM and llama.cpp in terms o",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 229.2954921722412,
+            "new_prefill_tokens": 1245,
+            "e2e_s": 1.946,
+            "context_msgs": 21
+          },
+          {
+            "step": 11,
+            "text": "[FINAL: Based on the available search results, here is a comparison of vLLM and llama.cpp in terms o",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 252.6681423187256,
+            "new_prefill_tokens": 1362,
+            "e2e_s": 1.991,
+            "context_msgs": 23
+          }
+        ]
+      },
+      {
+        "label": "multi_step_estimate_mimir",
+        "policy": "mimir",
+        "tool_offload": true,
+        "num_steps": 8,
+        "peak_used_blocks": 0,
+        "total_tool_data_bytes": 50886,
+        "final_answer": "1846",
+        "steps": [
+          {
+            "step": 0,
+            "text": "[TOOL: search('4B model agent GPU memory requirements 24GB context 8k')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 37.0030403137207,
+            "new_prefill_tokens": 133,
+            "e2e_s": 0.427,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "[TOOL: search('4B language model GPU memory requirements per agent 8k context')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 48.08998107910156,
+            "new_prefill_tokens": 252,
+            "e2e_s": 0.402,
+            "context_msgs": 4
+          },
+          {
+            "step": 2,
+            "text": "[TOOL: search('typical GPU memory usage for 4B model with 8k context')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 74.90181922912598,
+            "new_prefill_tokens": 369,
+            "e2e_s": 0.457,
+            "context_msgs": 6
+          },
+          {
+            "step": 3,
+            "text": "[TOOL: search('4B model memory footprint per agent 8k context inference')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 86.03334426879883,
+            "new_prefill_tokens": 488,
+            "e2e_s": 0.426,
+            "context_msgs": 8
+          },
+          {
+            "step": 4,
+            "text": "[TOOL: search('24GB GPU capacity for running multiple 4B models with 8k context')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8491,
+            "used_blocks": 0,
+            "ttft_ms": 122.89619445800781,
+            "new_prefill_tokens": 605,
+            "e2e_s": 0.542,
+            "context_msgs": 10
+          },
+          {
+            "step": 5,
+            "text": "[TOOL: search('average memory per 4B model agent with 8k context')]",
+            "tool_called": "search",
+            "tool_result_bytes": 8431,
+            "used_blocks": 0,
+            "ttft_ms": 139.82176780700684,
+            "new_prefill_tokens": 727,
+            "e2e_s": 0.505,
+            "context_msgs": 12
+          },
+          {
+            "step": 6,
+            "text": "[TOOL: calculator('(24 * 1024) / 14')]",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 161.88383102416992,
+            "new_prefill_tokens": 846,
+            "e2e_s": 0.495,
+            "context_msgs": 14
+          },
+          {
+            "step": 7,
+            "text": "[FINAL: 1846]",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 172.47366905212402,
+            "new_prefill_tokens": 871,
+            "e2e_s": 0.34,
+            "context_msgs": 15
+          }
+        ]
+      }
+    ]
+  },
+  "comparison": [
+    {
+      "task": "research_kv_cache",
+      "native_peak_used": 156,
+      "mimir_peak_used": 0,
+      "reduction_pct": 100.0,
+      "native_steps": 5,
+      "mimir_steps": 12,
+      "native_crashed": true,
+      "crash_reason": null,
+      "native_avg_ttft_ms": 92.0,
+      "mimir_avg_ttft_ms": 149.8,
+      "matched_steps": 5,
+      "native_matched_ttft_ms": 92.0,
+      "mimir_matched_ttft_ms": 82.0,
+      "matched_ttft_change_pct": -10.9,
+      "mimir_last_new_prefill_tokens": 1452,
+      "native_final": "The peak KV cache memory for a 7B model with a 32k context in fp16 is approximat",
+      "mimir_final": "(max steps reached without final answer)"
+    },
+    {
+      "task": "compare_frameworks",
+      "native_peak_used": 295,
+      "mimir_peak_used": 0,
+      "reduction_pct": 100.0,
+      "native_steps": 2,
+      "mimir_steps": 12,
+      "native_crashed": true,
+      "crash_reason": null,
+      "native_avg_ttft_ms": 182.0,
+      "mimir_avg_ttft_ms": 137.3,
+      "matched_steps": 2,
+      "native_matched_ttft_ms": 182.0,
+      "mimir_matched_ttft_ms": 39.6,
+      "matched_ttft_change_pct": -78.2,
+      "mimir_last_new_prefill_tokens": 1362,
+      "native_final": "The search results provided do not contain specific, actionable details about th",
+      "mimir_final": "(max steps reached without final answer)"
+    },
+    {
+      "task": "multi_step_estimate",
+      "native_peak_used": 447,
+      "mimir_peak_used": 0,
+      "reduction_pct": 100.0,
+      "native_steps": 4,
+      "mimir_steps": 8,
+      "native_crashed": true,
+      "crash_reason": "(crashed: The decoder prompt (length 4563) is longer than the maximum model length of 4096. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
+      "native_avg_ttft_ms": 143.2,
+      "mimir_avg_ttft_ms": 105.4,
+      "matched_steps": 3,
+      "native_matched_ttft_ms": 143.2,
+      "mimir_matched_ttft_ms": 53.3,
+      "matched_ttft_change_pct": -62.8,
+      "mimir_last_new_prefill_tokens": 871,
+      "native_final": "(crashed: The decoder prompt (length 4563) is longer than the maximum model leng",
+      "mimir_final": "1846"
+    }
+  ]
+}

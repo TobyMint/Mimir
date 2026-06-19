@@ -46,10 +46,10 @@ fi
 
 # 5. 总结
 echo "[5/5] 复现完成。"
-echo "  - 单元测试: 92 项（pytest -q）"
-echo "  - vLLM in-tree patch: 9 文件（详见 docs/VLLM_PATCH_INVENTORY.md）"
-echo "  - benchmark 结果: benchmark_results/*.json（24 个）"
-echo "  - 仪表盘 GIF: benchmark_results/dashboard_demo.gif"
+echo "  - 单元测试: 110 项（pytest -q）"
+echo "  - vLLM in-tree patch: 11 文件（详见 docs/VLLM_PATCH_INVENTORY.md，含 Phase R v1 TTFT 观测）"
+echo "  - benchmark 结果: benchmark_results/*.json（30+ 个）"
+echo "  - 动态仪表盘 GIF（真实引擎数据）: benchmark_results/agent_loop_demo.gif"
 echo "  - 文档: docs/（赛题/技术方案/系统设计/部署/测试报告/patch清单/editable安装）"
 echo "============================================================"
 echo "  全部结果可在 benchmark_results/ 与 docs/测试报告.md 查阅。"

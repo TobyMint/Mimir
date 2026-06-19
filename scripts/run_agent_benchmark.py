@@ -30,11 +30,12 @@ from benchmarks.agent_loop import TASKS
 from mimir.gpu import pick_least_busy_gpu
 
 CHILD = r"""
-import os, json, sys, traceback
+import os, json, sys, traceback, copy
 sys.path.insert(0, os.getcwd())
-model, gpu, util, mlen, mtok, policy, offload, tool_kb = (
+model, gpu, util, mlen, mtok, policy, offload, tool_kb, max_steps = (
     sys.argv[1], sys.argv[2], float(sys.argv[3]), int(sys.argv[4]),
-    int(sys.argv[5], ), sys.argv[6], sys.argv[7] == "1", int(sys.argv[8]))
+    int(sys.argv[5]), sys.argv[6], sys.argv[7] == "1", int(sys.argv[8]),
+    int(sys.argv[9]) if len(sys.argv) > 9 and sys.argv[9] else 0)
 os.environ["CUDA_VISIBLE_DEVICES"] = gpu
 from mimir.engine_vllm import EngineConfig
 from mimir.engine_vllm_v1 import VLLMEngineV1
@@ -46,12 +47,16 @@ eng = VLLMEngineV1(EngineConfig(
 _ = eng.llm
 results = []
 for task in TASKS:
+    # --max-steps override: a heavier/longer workload than the per-task default
+    t = dict(task)
+    if max_steps > 0:
+        t["max_steps"] = max_steps
     # Per-task resilience: native (no offload) is *expected* to crash on
     # context overflow — that IS the problem Mimir solves. Capture the crash
     # as a structured step-0 record instead of taking down the whole batch,
     # so the parent can still plot native's (short) curve vs Mimir's full one.
     try:
-        r = run_agent_loop(eng, task, policy=policy, tool_offload=offload,
+        r = run_agent_loop(eng, t, policy=policy, tool_offload=offload,
                            tool_result_kb=tool_kb, max_tokens=mtok)
         d = r.to_dict()
     except Exception as e:
@@ -73,7 +78,7 @@ print("RESULT_JSON:" + json.dumps(results))
 """
 
 
-def run_side(model, g, util, mlen, mtok, policy, offload, tool_kb):
+def run_side(model, g, util, mlen, mtok, policy, offload, tool_kb, max_steps=0):
     r = subprocess.run(
         [
             "python",
@@ -87,11 +92,12 @@ def run_side(model, g, util, mlen, mtok, policy, offload, tool_kb):
             policy,
             "1" if offload else "0",
             str(tool_kb),
+            str(max_steps),
         ],
         capture_output=True,
         text=True,
         env=dict(os.environ),
-        timeout=600,
+        timeout=900,
     )
     for line in r.stdout.splitlines():
         if line.startswith("RESULT_JSON:"):
@@ -107,6 +113,12 @@ def main() -> int:
     ap.add_argument("--max-model-len", type=int, default=4096)
     ap.add_argument("--max-tokens", type=int, default=96)
     ap.add_argument("--tool-kb", type=int, default=5, help="mock tool result size in KB")
+    ap.add_argument("--max-steps", type=int, default=0, help="override per-task max steps (0=use task default)")
+    ap.add_argument(
+        "--tag",
+        default="",
+        help="tag for output filenames (default: none; uses agent_benchmark_<model>)",
+    )
     ap.add_argument("--out-dir", default="benchmark_results")
     args = ap.parse_args()
 
@@ -114,9 +126,10 @@ def main() -> int:
     if g is None:
         print("NO_FREE_GPU")
         return 2
+    suffix = f"_{args.tag}" if args.tag else ""
     print(f"GPU {g.index}, free {g.mem_free_gib:.1f}GiB", flush=True)
     print(f"Tasks: {[t['name'] for t in TASKS]}", flush=True)
-    print(f"Tool result size: {args.tool_kb}KB", flush=True)
+    print(f"Tool result size: {args.tool_kb}KB, max-steps override: {args.max_steps or 'default'}", flush=True)
 
     summary = {"model": Path(args.model).name, "tool_kb": args.tool_kb, "native": {}, "mimir": {}}
 
@@ -131,6 +144,7 @@ def main() -> int:
             policy,
             offload,
             args.tool_kb,
+            args.max_steps,
         )
         for r in results:
             print(
@@ -146,7 +160,14 @@ def main() -> int:
     comparison = []
     for n, m in zip(native_res, mimir_res, strict=False):
         task_name = n["label"].rsplit("_", 1)[0] if "_" in n["label"] else n["label"]
-        n_crashed = bool(n.get("crashed")) or n.get("num_steps", 0) < m.get("num_steps", 0)
+        # native "crashed" = its run ended in a [CRASHED] sentinel step (the
+        # engine raised, e.g. context overflow). Reaching fewer steps alone is
+        # NOT a crash — native may just have answered [FINAL:] earlier.
+        def _ended_in_crash(run: dict) -> bool:
+            steps = run.get("steps", [])
+            return bool(steps) and steps[-1].get("used_blocks") == -1
+
+        n_crashed = bool(n.get("crashed")) or _ended_in_crash(n)
         # peak_used_blocks of a crashed step is -1 (sentinel); treat as N/A
         n_peak_raw = n.get("peak_used_blocks", 0)
         n_peak = None if n_peak_raw is None or n_peak_raw < 0 else n_peak_raw
@@ -225,7 +246,7 @@ def main() -> int:
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    jp = out_dir / f"agent_benchmark_{Path(args.model).name}.json"
+    jp = out_dir / f"agent_benchmark{suffix}_{Path(args.model).name}.json"
     jp.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # Plot: step-by-step used_blocks for each task, native vs Mimir (English labels)
@@ -324,7 +345,7 @@ def main() -> int:
                 fontsize=11,
             )
             fig.tight_layout()
-            png = out_dir / f"agent_benchmark_{Path(args.model).name}_curves.png"
+            png = out_dir / f"agent_benchmark{suffix}_{Path(args.model).name}_curves.png"
             fig.savefig(png, dpi=140)
             plt.close(fig)
             print(f"\nPNG: {png}", flush=True)
