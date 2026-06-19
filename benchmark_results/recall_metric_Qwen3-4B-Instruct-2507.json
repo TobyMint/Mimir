@@ -1,0 +1,55 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "metric": "second_cached_tokens: tool-call probe 所在 tool_result 块在 KV 压力淘汰后的存活 token 数（越大=probe 越没失忆）",
+  "native_lru_cached": 1088,
+  "mimir_class_aware_cached": 1136,
+  "mimir_advantage_tokens": 48,
+  "lru": {
+    "class_aware_evict": false,
+    "key": "ALPHA_7391",
+    "first_prompt_tokens": 3931,
+    "second_prompt_tokens": 1114,
+    "second_cached_tokens": 1088,
+    "second_new_prefill": 26,
+    "second_ttft_ms": 15.623807907104492,
+    "manual_evicted_reasoning": 0,
+    "class_counts_after_first": {
+      "system": 7,
+      "tool_result": 60,
+      "reasoning": 176,
+      "user": 2,
+      "unknown": 1
+    },
+    "class_evicts": {
+      "reasoning": 0,
+      "user": 0,
+      "tool_result": 0,
+      "system": 0,
+      "unknown": 0
+    }
+  },
+  "class_aware": {
+    "class_aware_evict": true,
+    "key": "BETA_2048",
+    "first_prompt_tokens": 3830,
+    "second_prompt_tokens": 1173,
+    "second_cached_tokens": 1136,
+    "second_new_prefill": 37,
+    "second_ttft_ms": 15.969276428222656,
+    "manual_evicted_reasoning": 342,
+    "class_counts_after_first": {
+      "system": 7,
+      "tool_result": 123,
+      "reasoning": 342,
+      "user": 4,
+      "unknown": 4
+    },
+    "class_evicts": {
+      "reasoning": 342,
+      "user": 0,
+      "tool_result": 0,
+      "system": 0,
+      "unknown": 0
+    }
+  }
+}
