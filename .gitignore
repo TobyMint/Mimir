@@ -97,3 +97,4 @@ third_party/vllm_prebuilt_bin/
 third_party/vllm/vllm/*.so
 third_party/vllm/vllm/vllm_flash_attn
 third_party/vllm/vllm/vllm_flash_attn/*.so
+.deepseek_key

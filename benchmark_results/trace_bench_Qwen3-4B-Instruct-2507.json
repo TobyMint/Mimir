@@ -1,0 +1,623 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "trace_source": "deepseek-v4-pro",
+  "native": {
+    "results": [
+      {
+        "label": "compare_frameworks_fcfs",
+        "policy": "fcfs",
+        "tool_offload": false,
+        "num_steps": 8,
+        "peak_used_blocks": 364,
+        "total_tool_data_bytes": 21307,
+        "final_answer": "(trace replay complete)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 7,
+            "ttft_ms": 26.5653133392334,
+            "new_prefill_tokens": 112,
+            "e2e_s": 0.591,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 7,
+            "ttft_ms": 13.650178909301758,
+            "new_prefill_tokens": 5,
+            "e2e_s": 0.104,
+            "context_msgs": 3
+          },
+          {
+            "step": 2,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 9,
+            "ttft_ms": 14.191389083862305,
+            "new_prefill_tokens": 26,
+            "e2e_s": 0.104,
+            "context_msgs": 5
+          },
+          {
+            "step": 3,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 11,
+            "ttft_ms": 13.666629791259766,
+            "new_prefill_tokens": 31,
+            "e2e_s": 0.11,
+            "context_msgs": 7
+          },
+          {
+            "step": 4,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 320,
+            "ttft_ms": 661.4627838134766,
+            "new_prefill_tokens": 4938,
+            "e2e_s": 0.775,
+            "context_msgs": 9
+          },
+          {
+            "step": 5,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 338,
+            "ttft_ms": 66.80154800415039,
+            "new_prefill_tokens": 281,
+            "e2e_s": 0.184,
+            "context_msgs": 10
+          },
+          {
+            "step": 6,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 344,
+            "ttft_ms": 29.424428939819336,
+            "new_prefill_tokens": 91,
+            "e2e_s": 0.146,
+            "context_msgs": 12
+          },
+          {
+            "step": 7,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 364,
+            "ttft_ms": 69.38409805297852,
+            "new_prefill_tokens": 317,
+            "e2e_s": 0.188,
+            "context_msgs": 14
+          }
+        ]
+      },
+      {
+        "label": "multi_step_estimate_fcfs",
+        "policy": "fcfs",
+        "tool_offload": false,
+        "num_steps": 4,
+        "peak_used_blocks": 663,
+        "total_tool_data_bytes": 21307,
+        "final_answer": "(crashed: The decoder prompt (length 10573) is longer than the maximum model length of 8192. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 372,
+            "ttft_ms": 30.543804168701172,
+            "new_prefill_tokens": 133,
+            "e2e_s": 0.124,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 373,
+            "ttft_ms": 14.383554458618164,
+            "new_prefill_tokens": 10,
+            "e2e_s": 0.107,
+            "context_msgs": 3
+          },
+          {
+            "step": 2,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 663,
+            "ttft_ms": 621.8714714050293,
+            "new_prefill_tokens": 4635,
+            "e2e_s": 0.736,
+            "context_msgs": 5
+          },
+          {
+            "step": 3,
+            "text": "[CRASHED]",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": -1,
+            "ttft_ms": null,
+            "new_prefill_tokens": null,
+            "e2e_s": 0.032,
+            "context_msgs": 7
+          }
+        ]
+      },
+      {
+        "label": "research_kv_cache_fcfs",
+        "policy": "fcfs",
+        "tool_offload": false,
+        "num_steps": 5,
+        "peak_used_blocks": 945,
+        "total_tool_data_bytes": 19807,
+        "final_answer": "(crashed: The decoder prompt (length 9751) is longer than the maximum model length of 8192. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 672,
+            "ttft_ms": 26.86786651611328,
+            "new_prefill_tokens": 140,
+            "e2e_s": 0.12,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 943,
+            "ttft_ms": 573.4536647796631,
+            "new_prefill_tokens": 4332,
+            "e2e_s": 0.685,
+            "context_msgs": 4
+          },
+          {
+            "step": 2,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 944,
+            "ttft_ms": 22.129058837890625,
+            "new_prefill_tokens": 17,
+            "e2e_s": 0.134,
+            "context_msgs": 5
+          },
+          {
+            "step": 3,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 945,
+            "ttft_ms": 22.092819213867188,
+            "new_prefill_tokens": 22,
+            "e2e_s": 0.134,
+            "context_msgs": 7
+          },
+          {
+            "step": 4,
+            "text": "[CRASHED]",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": -1,
+            "ttft_ms": null,
+            "new_prefill_tokens": null,
+            "e2e_s": 0.029,
+            "context_msgs": 9
+          }
+        ]
+      }
+    ]
+  },
+  "mimir": {
+    "results": [
+      {
+        "label": "compare_frameworks_mimir",
+        "policy": "mimir",
+        "tool_offload": true,
+        "num_steps": 8,
+        "peak_used_blocks": 0,
+        "total_tool_data_bytes": 85144,
+        "final_answer": "(trace replay complete)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 27.616500854492188,
+            "new_prefill_tokens": 112,
+            "e2e_s": 0.62,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 22.634029388427734,
+            "new_prefill_tokens": 117,
+            "e2e_s": 0.115,
+            "context_msgs": 3
+          },
+          {
+            "step": 2,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 27.45652198791504,
+            "new_prefill_tokens": 138,
+            "e2e_s": 0.121,
+            "context_msgs": 5
+          },
+          {
+            "step": 3,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 27.20928192138672,
+            "new_prefill_tokens": 159,
+            "e2e_s": 0.12,
+            "context_msgs": 7
+          },
+          {
+            "step": 4,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 49.98040199279785,
+            "new_prefill_tokens": 279,
+            "e2e_s": 0.143,
+            "context_msgs": 9
+          },
+          {
+            "step": 5,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 81.80880546569824,
+            "new_prefill_tokens": 550,
+            "e2e_s": 0.177,
+            "context_msgs": 10
+          },
+          {
+            "step": 6,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 96.99654579162598,
+            "new_prefill_tokens": 648,
+            "e2e_s": 0.191,
+            "context_msgs": 12
+          },
+          {
+            "step": 7,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 121.76346778869629,
+            "new_prefill_tokens": 970,
+            "e2e_s": 0.218,
+            "context_msgs": 14
+          }
+        ]
+      },
+      {
+        "label": "multi_step_estimate_mimir",
+        "policy": "mimir",
+        "tool_offload": true,
+        "num_steps": 10,
+        "peak_used_blocks": 0,
+        "total_tool_data_bytes": 340576,
+        "final_answer": "(trace replay complete)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 30.111312866210938,
+            "new_prefill_tokens": 133,
+            "e2e_s": 0.122,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 26.488780975341797,
+            "new_prefill_tokens": 138,
+            "e2e_s": 0.118,
+            "context_msgs": 3
+          },
+          {
+            "step": 2,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 49.01862144470215,
+            "new_prefill_tokens": 257,
+            "e2e_s": 0.141,
+            "context_msgs": 5
+          },
+          {
+            "step": 3,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 59.66472625732422,
+            "new_prefill_tokens": 388,
+            "e2e_s": 0.153,
+            "context_msgs": 7
+          },
+          {
+            "step": 4,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 60.480594635009766,
+            "new_prefill_tokens": 393,
+            "e2e_s": 0.154,
+            "context_msgs": 8
+          },
+          {
+            "step": 5,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 60.822486877441406,
+            "new_prefill_tokens": 414,
+            "e2e_s": 0.155,
+            "context_msgs": 10
+          },
+          {
+            "step": 6,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 60.97269058227539,
+            "new_prefill_tokens": 435,
+            "e2e_s": 0.154,
+            "context_msgs": 12
+          },
+          {
+            "step": 7,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 60.97888946533203,
+            "new_prefill_tokens": 456,
+            "e2e_s": 0.154,
+            "context_msgs": 14
+          },
+          {
+            "step": 8,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 61.580657958984375,
+            "new_prefill_tokens": 477,
+            "e2e_s": 0.155,
+            "context_msgs": 16
+          },
+          {
+            "step": 9,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 85.74414253234863,
+            "new_prefill_tokens": 594,
+            "e2e_s": 0.179,
+            "context_msgs": 18
+          }
+        ]
+      },
+      {
+        "label": "research_kv_cache_mimir",
+        "policy": "mimir",
+        "tool_offload": true,
+        "num_steps": 10,
+        "peak_used_blocks": 0,
+        "total_tool_data_bytes": 305790,
+        "final_answer": "(trace replay complete)",
+        "steps": [
+          {
+            "step": 0,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 26.173114776611328,
+            "new_prefill_tokens": 140,
+            "e2e_s": 0.118,
+            "context_msgs": 2
+          },
+          {
+            "step": 1,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 31.773090362548828,
+            "new_prefill_tokens": 252,
+            "e2e_s": 0.125,
+            "context_msgs": 4
+          },
+          {
+            "step": 2,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 49.26013946533203,
+            "new_prefill_tokens": 257,
+            "e2e_s": 0.141,
+            "context_msgs": 5
+          },
+          {
+            "step": 3,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 49.796342849731445,
+            "new_prefill_tokens": 278,
+            "e2e_s": 0.143,
+            "context_msgs": 7
+          },
+          {
+            "step": 4,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 60.456275939941406,
+            "new_prefill_tokens": 403,
+            "e2e_s": 0.154,
+            "context_msgs": 9
+          },
+          {
+            "step": 5,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 60.77980995178223,
+            "new_prefill_tokens": 408,
+            "e2e_s": 0.154,
+            "context_msgs": 10
+          },
+          {
+            "step": 6,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 61.064720153808594,
+            "new_prefill_tokens": 429,
+            "e2e_s": 0.154,
+            "context_msgs": 12
+          },
+          {
+            "step": 7,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 61.371564865112305,
+            "new_prefill_tokens": 450,
+            "e2e_s": 0.155,
+            "context_msgs": 14
+          },
+          {
+            "step": 8,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 61.45167350769043,
+            "new_prefill_tokens": 471,
+            "e2e_s": 0.155,
+            "context_msgs": 16
+          },
+          {
+            "step": 9,
+            "text": "",
+            "tool_called": null,
+            "tool_result_bytes": 0,
+            "used_blocks": 0,
+            "ttft_ms": 62.03579902648926,
+            "new_prefill_tokens": 492,
+            "e2e_s": 0.156,
+            "context_msgs": 18
+          }
+        ]
+      }
+    ]
+  },
+  "comparison": [
+    {
+      "task": "compare_frameworks",
+      "native_peak_used": 364,
+      "mimir_peak_used": 0,
+      "reduction_pct": null,
+      "native_steps": 8,
+      "mimir_steps": 8,
+      "native_crashed": false,
+      "native_matched_ttft_ms": 111.9,
+      "mimir_matched_ttft_ms": 56.9,
+      "matched_ttft_change_pct": -49.2,
+      "matched_steps": 8,
+      "native_last_new_prefill": 317,
+      "mimir_last_new_prefill": 970,
+      "mimir_tool_offloaded_bytes": 85144
+    },
+    {
+      "task": "multi_step_estimate",
+      "native_peak_used": 663,
+      "mimir_peak_used": 0,
+      "reduction_pct": null,
+      "native_steps": 4,
+      "mimir_steps": 10,
+      "native_crashed": true,
+      "native_matched_ttft_ms": 222.3,
+      "mimir_matched_ttft_ms": 35.2,
+      "matched_ttft_change_pct": -84.2,
+      "matched_steps": 3,
+      "native_last_new_prefill": 4635,
+      "mimir_last_new_prefill": 257,
+      "mimir_tool_offloaded_bytes": 340576
+    },
+    {
+      "task": "research_kv_cache",
+      "native_peak_used": 945,
+      "mimir_peak_used": 0,
+      "reduction_pct": null,
+      "native_steps": 5,
+      "mimir_steps": 10,
+      "native_crashed": true,
+      "native_matched_ttft_ms": 161.1,
+      "mimir_matched_ttft_ms": 39.3,
+      "matched_ttft_change_pct": -75.6,
+      "matched_steps": 4,
+      "native_last_new_prefill": 22,
+      "mimir_last_new_prefill": 278,
+      "mimir_tool_offloaded_bytes": 305790
+    }
+  ]
+}

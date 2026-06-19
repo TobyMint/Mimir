@@ -1,0 +1,64 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "judge": "deepseek-v4-flash",
+  "fidelity": "balanced",
+  "results": [
+    {
+      "task": "compare_frameworks",
+      "question": "Compare vLLM and llama.cpp in terms of memory efficiency and agent support. Search for relevant information first.",
+      "reference": "## vLLM vs llama.cpp: Memory Efficiency & Agent Support\n\n| Aspect | **llama.cpp** | **vLLM** |\n|--------|---------------|----------|\n| **Memory Efficiency** | Excellent. Supports 2‑ to 8‑bit quantization, memory‑mapped loading, CPU/GPU offloading, and optimised KV caching. Can run 13B–70B models on consumer GPUs or even CPU‑only. Very low VRAM/RAM usage. | Good but higher baseline. PagedAttention ",
+      "compression": {
+        "original_chars": 26643,
+        "compressed_chars": 2395,
+        "reduction_pct": 91.0,
+        "tool_results_summarized": 1
+      },
+      "full_answer": "[FINAL:  \n**Memory Efficiency**  \n- **llama.cpp**: Highly memory-efficient, supports 2-bit to 8-bit quantization, enabling large models to run on consumer GPUs, CPUs, or edge devices with minimal VRAM/RAM usage.  \n- **vLLM**: Optimized for throughput with PagedAttention, reducing KV cache fragmentation, but requires full-precision or limited quantization (e.g., FP16/INT8), resulting in higher base",
+      "full_score": 10.0,
+      "full_correct": true,
+      "full_reason": "The candidate answer accurately captures all key points from the reference, including memory efficiency details and agent support features, without errors or omissions.",
+      "mimir_answer": "[FINAL: \n**Memory Efficiency**\n- **llama.cpp** is extremely memory-efficient, supporting aggressive quantization (2‑bit to 8‑bit) that dramatically reduces VRAM/RAM requirements. It can run large models on consumer GPUs, CPU-only setups, or even edge devices, using memory-mapped file loading and optimized KV caching to minimise footprint.\n- **vLLM** prioritizes high throughput and low latency. Its",
+      "mimir_score": 10.0,
+      "mimir_correct": true,
+      "mimir_reason": "The candidate answer accurately reflects all key points from the reference, including memory efficiency comparisons and agent support details."
+    },
+    {
+      "task": "multi_step_estimate",
+      "question": "Estimate how many concurrent 4B-model agents can run on a single 24GB GPU at 8k context. Search for model specs, then calculate.",
+      "reference": "We need to estimate how many concurrent 4B-parameter model agents can run on a single 24GB GPU at 8k context. We need to search for model specs, then calculate. The user likely expects a rough estimate based on typical memory usage of a 4B parameter model. We should consider both model weights and activation memory for context length 8k. Also consider that \"agents\" might imply each agent has its o",
+      "compression": {
+        "original_chars": 65155,
+        "compressed_chars": 1727,
+        "reduction_pct": 97.3,
+        "tool_results_summarized": 3
+      },
+      "full_answer": "(full crashed: The decoder prompt (length 15771) is longer than the maximum model length of 8192. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
+      "full_score": 0.0,
+      "full_correct": false,
+      "full_reason": "Candidate output was a system error message, not an answer to the question.",
+      "mimir_answer": "[TOOL: search('4B model KV cache memory per token bytes at 8k context per agent')]",
+      "mimir_score": 0.0,
+      "mimir_correct": false,
+      "mimir_reason": "Candidate only issued a search tool call, provided no actual calculation or estimate."
+    },
+    {
+      "task": "research_kv_cache",
+      "question": "Research how KV cache memory management works in LLM inference, then estimate the peak KV memory for a 7B model at 32k context in fp16.",
+      "reference": "We need to answer: \"Research how KV cache memory management works in LLM inference, then estimate the peak KV memory for a 7B model at 32k context in fp16.\"\n\nWe need to explain KV cache management and compute memory estimate.\n\nFirst, understand KV cache: In autoregressive LLM inference, each token generates key and value tensors for attention layers. These are cached to avoid recomputation. The ca",
+      "compression": {
+        "original_chars": 62395,
+        "compressed_chars": 1788,
+        "reduction_pct": 97.1,
+        "tool_results_summarized": 3
+      },
+      "full_answer": "(full crashed: The decoder prompt (length 15705) is longer than the maximum model length of 8192. Make sure that `max_model_len` is no smaller than the number of text tokens.)",
+      "full_score": 0.0,
+      "full_correct": false,
+      "full_reason": "The candidate output is a crash/error message, not a valid answer to the query.",
+      "mimir_answer": "KV cache memory management in LLM inference involves storing key-value (K-V) pairs for each token in the sequence to enable efficient attention computation. During generation, the model maintains a cache of past K-V pairs to avoid recomputing attention over previously generated tokens, reducing computational and memory overhead.\n\nFor a 7B parameter model with a 32k context length in fp16 precision",
+      "mimir_score": null,
+      "mimir_correct": null,
+      "mimir_reason": ""
+    }
+  ]
+}
