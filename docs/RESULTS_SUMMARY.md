@@ -39,6 +39,10 @@
 | J | `mimir_reclaim_evictable` 闭环回收 | EVICTABLE 块扫描回收 |
 | L | mimir 策略自动回收（自驱动） | 任务完成即回收，无需外部调用 |
 
+## 异构硬件抽象（赛题方向之六）
+
+`mimir/hardware/device.py`：`DeviceBackend` 抽象（CUDA/ROCm/Ascend/Cambricon/CPU），运行时探测（`torch.cuda` / `torch_npu` / 环境变量）+ 降级链。`supports_fp8()` 只在 Hopper(sm90)+ 为真；3090(sm86) 走 Phase F 优雅降级。`recommend_engine_config()` 按后端推荐 dtype/kv_cache_dtype（无卡→float32/eager；3090→bf16；Hopper→fp8）。9 测试覆盖；真实报告：4× RTX 3090 sm86，fp8 false。
+
 ## 多模型规模泛化（Phase K）
 
 | 模型 | lifecycle 回收 | CoW 复用 | patch 生效 |
