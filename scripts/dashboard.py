@@ -109,6 +109,7 @@ def comparison_panel() -> Panel:
         ("fp8 KV 量化", "KV 容量", "1772块", "3659块", "2.06x"),
         ("Phase M A/B", "10轮 used_blocks", "69 (原生)", "0 (Mimir)", "-100%"),
         ("Phase O 并发", "3agent峰值", "14 (原生)", "0 (Mimir)", "-100%"),
+        ("Phase P 压力", "6任务used", "27 (原生)", "0 (Mimir)", "-100%"),
     ]
     t = Table(title="baseline vs Mimir (真实数据)", expand=True)
     t.add_column("方向", style="cyan")

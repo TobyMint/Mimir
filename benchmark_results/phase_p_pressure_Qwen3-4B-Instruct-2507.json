@@ -1,0 +1,77 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "scenario": "6 long-context tasks filling a small KV pool (lifecycle-aware allocation pressure)",
+  "kv_pool_total_blocks": 707,
+  "native": {
+    "final_used_blocks": 27,
+    "rows": [
+      {
+        "task": "task_0",
+        "used": 22,
+        "reclaims": 0
+      },
+      {
+        "task": "task_1",
+        "used": 23,
+        "reclaims": 0
+      },
+      {
+        "task": "task_2",
+        "used": 24,
+        "reclaims": 0
+      },
+      {
+        "task": "task_3",
+        "used": 25,
+        "reclaims": 0
+      },
+      {
+        "task": "task_4",
+        "used": 26,
+        "reclaims": 0
+      },
+      {
+        "task": "task_5",
+        "used": 27,
+        "reclaims": 0
+      }
+    ]
+  },
+  "mimir": {
+    "final_used_blocks": 0,
+    "lifecycle_reclaims": 132,
+    "rows": [
+      {
+        "task": "task_0",
+        "used": 0,
+        "reclaims": 22
+      },
+      {
+        "task": "task_1",
+        "used": 0,
+        "reclaims": 44
+      },
+      {
+        "task": "task_2",
+        "used": 0,
+        "reclaims": 66
+      },
+      {
+        "task": "task_3",
+        "used": 0,
+        "reclaims": 88
+      },
+      {
+        "task": "task_4",
+        "used": 0,
+        "reclaims": 110
+      },
+      {
+        "task": "task_5",
+        "used": 0,
+        "reclaims": 132
+      }
+    ]
+  },
+  "headline": "native used accumulates to 27 (reclaims=0); Mimir holds used=0 (reclaims=132) under KV pressure"
+}
