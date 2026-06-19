@@ -61,5 +61,7 @@ Continuum（`vllm-continuum`/`vllm-diff`，同为 v0.10.2 fork）做的是 **工
 | `scripts/run_phase_d_cow.py` | CoW 跨分支复用（9 次） |
 | `scripts/run_phase_e_pin.py` | per-block pin 存活（3/3） |
 | `scripts/run_phase7_fp8kv.py`（改用 v1）| fp8 回退 |
+| `scripts/run_phase_j_reclaim_evictable.py` | reclaim_evictable 闭环 |
+| `scripts/run_phase_k_multimodel.py` | 多模型规模泛化（1.7B/4B）|
 
 结果落盘：`benchmark_results/phase_{c,d,e,f,g}_*.json`。
