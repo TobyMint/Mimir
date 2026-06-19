@@ -73,3 +73,25 @@
 - 2026-06-19 Phase E：per-block KV-pin — 3/3 pinned 块压力下存活（ce6bed3）
 - 2026-06-19 Phase F：fp8 优雅降级到 bf16（aed4f43）
 - 2026-06-19 Phase G：'mimir' 调度策略 + MimirRequestQueue（845344b）
+
+## 续上指南（给下一个会话）
+
+**当前完整度**：Phase A-O 全部完成。vLLM v0.10.2 拍平为普通目录 `third_party/vllm_flat`（9-10 文件 in-tree patch），外部优化层 11 方向，两个决定性引擎级 A/B（Phase M 单 agent used 69→0；Phase O 3-agent 并发 used 14→0），多模型泛化（1.7B/4B），92 测试，一键复现。
+
+**如何启动**：`source scripts/activate_env.sh`（fresh clone 先 `bash scripts/setup_vllm_binaries.sh`）。
+
+**可继续推进的方向（按价值排序）**：
+1. **Phase P — 真实 KV 压力淘汰验证**：构造超 KV 池的并发长上下文，验证 mimir 策略下 EVICTABLE 块被优先淘汰（vs LRU-活跃块）。Phase J 写了 reclaim_evictable 但未在真实压力路径练过。
+2. **更重的工作负载 A/B**：Phase M 用的是 10 轮问答；可换成「工具调用密集 + 长上下文」更贴合赛题 tool_call 场景，放大外部压缩/外置的显存收益。
+3. **国产硬件抽象落地**：`mimir/hardware/` 目前是骨架；可加 CUDA/DTK/CANN 设备抽象 + 真实降级测试（赛题鼓励异构）。
+4. **llama.cpp 后端适配**：赛题允许 vLLM/llama.cpp 二选一；加 llama.cpp 后端验证泛化（评分 20）。
+5. **更长上下文生存 demo（视频/动图）**：把 Phase 5 分层存储的「baseline OOM vs Mimir 存活 20 轮」做成可演示动图。
+
+**重要约定（见 CLAUDE.md + memory）**：
+- 频繁 commit + push（每次逻辑里程碑）。
+- GitHub 仅 SSH（HTTPS 被屏蔽）。
+- GPU 忙→轻量正确性；空闲→重 benchmark。
+- vLLM patch 是纯 Python（`third_party/vllm_flat/vllm/v1/...`），不重编 `_C`。
+- 真实指标用 TTFT + new_prefill + used_blocks；E2E 在共享 GPU 上噪声大需多次平均。
+
+**邮件通知**：`python3 ~/.claude/hooks/notify_email.py "<标题>"`（163，`x2406862525@163.com`）。
