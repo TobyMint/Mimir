@@ -1,0 +1,102 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "scenario": "3 agents (A/B/C) interleaved 6 steps on one GPU",
+  "native": {
+    "peak_used_blocks": 14,
+    "final_used_blocks": 14,
+    "rows": [
+      {
+        "step": 1,
+        "agent": "A",
+        "task_id": "agent_A_0",
+        "used_blocks": 4,
+        "lifecycle_reclaims": 0
+      },
+      {
+        "step": 2,
+        "agent": "B",
+        "task_id": "agent_B_1",
+        "used_blocks": 8,
+        "lifecycle_reclaims": 0
+      },
+      {
+        "step": 3,
+        "agent": "C",
+        "task_id": "agent_C_2",
+        "used_blocks": 12,
+        "lifecycle_reclaims": 0
+      },
+      {
+        "step": 4,
+        "agent": "A",
+        "task_id": "agent_A_3",
+        "used_blocks": 12,
+        "lifecycle_reclaims": 0
+      },
+      {
+        "step": 5,
+        "agent": "B",
+        "task_id": "agent_B_4",
+        "used_blocks": 13,
+        "lifecycle_reclaims": 0
+      },
+      {
+        "step": 6,
+        "agent": "C",
+        "task_id": "agent_C_5",
+        "used_blocks": 14,
+        "lifecycle_reclaims": 0
+      }
+    ]
+  },
+  "mimir": {
+    "peak_used_blocks": 0,
+    "final_used_blocks": 0,
+    "lifecycle_reclaims": 24,
+    "rows": [
+      {
+        "step": 1,
+        "agent": "A",
+        "task_id": "agent_A_0",
+        "used_blocks": 0,
+        "lifecycle_reclaims": 4
+      },
+      {
+        "step": 2,
+        "agent": "B",
+        "task_id": "agent_B_1",
+        "used_blocks": 0,
+        "lifecycle_reclaims": 8
+      },
+      {
+        "step": 3,
+        "agent": "C",
+        "task_id": "agent_C_2",
+        "used_blocks": 0,
+        "lifecycle_reclaims": 12
+      },
+      {
+        "step": 4,
+        "agent": "A",
+        "task_id": "agent_A_3",
+        "used_blocks": 0,
+        "lifecycle_reclaims": 16
+      },
+      {
+        "step": 5,
+        "agent": "B",
+        "task_id": "agent_B_4",
+        "used_blocks": 0,
+        "lifecycle_reclaims": 20
+      },
+      {
+        "step": 6,
+        "agent": "C",
+        "task_id": "agent_C_5",
+        "used_blocks": 0,
+        "lifecycle_reclaims": 24
+      }
+    ]
+  },
+  "headline": "native peak=14 vs Mimir peak=0 (reclaims=24)"
+}
