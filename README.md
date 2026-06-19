@@ -6,6 +6,8 @@
 >
 > 🔥 **最强一击（Phase Q，工具调用并发）**：3 个 agent × 2 轮工具调用（每轮含 ~5KB 工具返回），原生 vLLM KV 累积到 **262 块**，Mimir（工具外置 + 逐任务自动回收）保持 **0 块**（reclaims=42）。\
 > ![Phase Q 工具调用并发 A/B](benchmark_results/phase_q_toolcall_concurrent_Qwen3-4B-Instruct-2507_curves.png)
+>
+> 🎞️ **动态演示**：[Phase Q 逐轮揭示 262→0](benchmark_results/phase_q_demo.gif) ｜ [实时内存仪表盘](benchmark_results/dashboard_demo.gif)（三层冷热 / 生命周期 / 分支 CoW / 四 A/B 汇总）
 
 <p align="center">
   <b>研究创新赛道 · 面向智能体的内存管理系统设计与实现（高校赛题）</b>
