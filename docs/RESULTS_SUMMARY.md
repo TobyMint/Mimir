@@ -51,6 +51,19 @@
 Mimir 独有（Continuum 无）：任务边界主动回收（Phase C）、per-block pin（Phase E）、CoW 记账（Phase D）、fp8 容错（Phase F）、`mimir` 调度策略（Phase G）。
 Continuum 做 tool-call-pause 的 time-bounded whole-request pin；Mimir 做 lifecycle-bounded per-block pin + 任务边界主动回收 + 自驱动策略。
 
+## 统一入口（外部层 + 引擎层协同）
+
+```python
+from mimir.manager import MemoryManager
+from mimir.engine_vllm_v1 import VLLMEngineV1
+
+mm = MemoryManager(features=["context_compress","tool_offload","prefix_cache","tiered","lifecycle"])
+eng = VLLMEngineV1(cfg, device=0)  # scheduling_policy="mimir" -> 引擎层自动回收
+# 单次调用：外部压缩/外置 + 引擎 mimir 策略自动回收
+r = mm.run_turn_with_engine(eng, case, task_id="t1", max_tokens=16)
+# r["engine_stats"]["mimir_lifecycle_reclaims"] 显示回收次数，used_blocks 守恒
+```
+
 ## 一键复现
 
 ```bash
