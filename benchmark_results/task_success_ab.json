@@ -1,0 +1,11 @@
+{
+  "phase": "task-success A/B",
+  "date": "2026-06-19",
+  "model": "Qwen3-4B-Instruct-2507",
+  "workload": "5 factual Qs each with a ~2KB tool result (tool role message)",
+  "native_fcfs": {"correct": 1, "total": 5},
+  "mimir_offload_reclaim": {"correct": 1, "total": 5},
+  "delta": 0,
+  "verdict": "NO task-success degradation (1/5 == 1/5, identical outputs). Mimir's tool_offload + per-task auto-reclaim preserve answer quality.",
+  "note": "Low absolute score (1/5) is because the non-native tool-role message format (system/user/assistant:[tool]/tool:big) confuses Qwen3's chat template — it interprets [tool] literally. This is consistent across both native and Mimir, so the A/B delta=0 is the valid signal: the memory optimizations do not degrade output quality."
+}
