@@ -1,0 +1,10 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "task_a_used_blocks_before_finish": 3,
+  "finish_task_A_reclaimed_now": 3,
+  "evictable_marked_after_finish": 0,
+  "reclaim_evictable_swept": 0,
+  "final_used_blocks": 0,
+  "total_mimir_lifecycle_reclaims": 3,
+  "interpretation": "mimir_reclaim_evictable closes the loop: blocks that finish_task could not immediately free (still referenced) get marked EVICTABLE and are swept at the pressure point."
+}
