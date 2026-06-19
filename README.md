@@ -70,18 +70,30 @@ Mimir/
 
 ## 快速开始
 
+> **重要**：vLLM v0.10.2 已**拍平为普通目录** `third_party/vllm_flat`（不再是 submodule），
+> 通过 `.pth` + dist-info 接入（详见 [`docs/VLLM_EDITABLE_SETUP.md`](docs/VLLM_EDITABLE_SETUP.md)）。
+> 因此新 clone / 新环境**必须先 `source scripts/activate_env.sh`** 才能 `import vllm`。
+> 该脚本幂等地：`conda activate mimir` → 写 `.pth`/dist-info → `LD_LIBRARY_PATH += torch/lib` → v1 单进程 env。
+
 ```bash
-# 1. 创建虚拟环境
-python -m venv .venv && source .venv/bin/activate
+# 0. 首次：准备预编译二进制（vllm_prebuilt_bin，gitignored）
+#    见 docs/VLLM_EDITABLE_SETUP.md §「接入预编译二进制」—— 从 vllm==0.10.2 wheel 提取 .so + flash_attn 包，
+#    symlink 进 third_party/vllm_flat/vllm/。
 
-# 2. 安装依赖（开发模式）
-pip install -e ".[dev]"
+# 1. conda 环境 mimir（python 3.11 + torch 2.8.0+cu128 + vllm 0.10.2 依赖）
+source /opt/miniconda3/etc/profile.d/conda.sh
+conda activate mimir
+pip install -e ".[dev]"          # Mimir 自身
 
-# 3. 运行测试
-make test
+# 2. 激活 vLLM flat 接入（每次会话）
+source scripts/activate_env.sh
 
-# 4. 运行 Benchmark
-make benchmark
+# 3. 一键复现验证（CPU 模式 ~2 分钟）
+make reproduce    # 或 bash scripts/reproduce.sh --quick
+
+# 4. 全量 Benchmark（需空闲单卡）
+make benchmark    # 或单跑：python scripts/run_phase_m_ab.py
+```
 ```
 
 ## 复现性说明
