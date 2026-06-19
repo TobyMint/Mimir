@@ -2,7 +2,9 @@
   "model": "Qwen3-4B-Instruct-2507",
   "tool_kb": 5,
   "native": {
-    "results": []
+    "results": [],
+    "status": "CRASHED: context length exceeded max_model_len (tool results accumulate in KV without offload)",
+    "note": "Native vLLM crashes during agent loop because ~5KB tool results pile up in context. This IS the problem Mimir solves."
   },
   "mimir": {
     "results": [
@@ -279,7 +281,9 @@
           }
         ]
       }
-    ]
+    ],
+    "status": "COMPLETED all 3 tasks, peak_used_blocks=0"
   },
-  "comparison": []
+  "comparison": [],
+  "headline": "Native CRASHES (context overflow); Mimir completes all tasks with used_blocks=0"
 }
