@@ -18,8 +18,8 @@ KV Cache、上下文结构及显存分配机制的系统性优化，有效降低
 
 ## vLLM 0.10.2 In-Tree Patch（内核级优化）
 
-Mimir 不仅在 vLLM 之上做外部封装，更**直接 patch 了 vLLM v0.10.2 源码**（作为 git submodule
-`third_party/vllm`，分支 `mimir-patches-v0.10.2`，纯 Python、不重编 `_C`）：
+Mimir 不仅在 vLLM 之上做外部封装，更**直接 patch 了 vLLM v0.10.2 源码**（拍平为普通目录
+`third_party/vllm_flat`（源自 v0.10.2 fork `mimir-patches-v0.10.2`），纯 Python、不重编 `_C`）：
 
 | 引擎层 patch | 真实验证 |
 | --- | --- |
