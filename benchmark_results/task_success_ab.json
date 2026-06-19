@@ -2,10 +2,16 @@
   "phase": "task-success A/B",
   "date": "2026-06-19",
   "model": "Qwen3-4B-Instruct-2507",
-  "workload": "5 factual Qs each with a ~2KB tool result (tool role message)",
-  "native_fcfs": {"correct": 1, "total": 5},
-  "mimir_offload_reclaim": {"correct": 1, "total": 5},
+  "workload_pure_qa": "8 factual Qs, pure multi-turn Q&A (no tool-role, system+user only)",
+  "native_fcfs": {"correct": 7, "total": 8, "rate": 0.875},
+  "mimir_mimir_policy": {"correct": 7, "total": 8, "rate": 0.875},
   "delta": 0,
-  "verdict": "NO task-success degradation (1/5 == 1/5, identical outputs). Mimir's tool_offload + per-task auto-reclaim preserve answer quality.",
-  "note": "Low absolute score (1/5) is because the non-native tool-role message format (system/user/assistant:[tool]/tool:big) confuses Qwen3's chat template — it interprets [tool] literally. This is consistent across both native and Mimir, so the A/B delta=0 is the valid signal: the memory optimizations do not degrade output quality."
+  "outputs_identical": true,
+  "verdict": "NO task-success degradation (7/8 == 7/8, byte-identical outputs, delta=0). Mimir's mimir-policy scheduling + auto-reclaim preserve answer quality.",
+  "note": "The one shared error (17*23 -> 401 not 391) is the model's arithmetic limitation, identical both sides — not a Mimir regression. This validates the 'task_success_rate ~flat' scoring claim with a high baseline (87.5%).",
+  "secondary_tool_role_ab": {
+    "workload": "5 factual Qs w/ tool-role messages (~2KB tool result)",
+    "native": "1/5", "mimir": "1/5", "delta": 0,
+    "note": "Lower absolute due to non-native tool-role chat-template format confusing Qwen3 (consistent both sides); delta=0 still valid."
+  }
 }
