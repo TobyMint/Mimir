@@ -109,16 +109,19 @@ QS = ["What is prefix caching?","How does KV reuse save memory?","Estimate KV fo
 hist = [{"role":"system","content":SYS}]
 rows = []
 for i, q in enumerate(QS):
-    hist.append({"role":"user","content":q})
+    hist.append({"role":"user","content":q + (" KV cache stores keys and values per layer. " * 8)})
     if compress and i >= 2:
         kf = len(hist)-4 if len(hist)>4 else 0
         old, recent = hist[:kf], hist[kf:]
         old = [{"role":m["role"],"content":(m["content"][:40]+"…" if m["role"]=="user" and len(m["content"])>40 else m["content"])} for m in old]
         hist = old + recent
+    # Mimir 侧：每轮一个独立 task_id（触发 auto-reclaim）+ 更长上下文
+    if policy == "mimir":
+        eng.set_current_task(f"turn_{i}")
     txt, n = eng.chat(list(hist), max_tokens=mtok, temperature=0.0)
     st = eng.mimir_stats()
     rows.append({"turn":i+1,"used_blocks":st.get("used_blocks"),"lifecycle_reclaims":st.get("mimir_lifecycle_reclaims"),"out_tokens":n})
-    hist.append({"role":"assistant","content":txt[:60]})
+    hist.append({"role":"assistant","content":txt})
 print("RESULT_JSON:"+json.dumps(rows))
 """
 
