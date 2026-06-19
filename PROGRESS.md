@@ -95,3 +95,20 @@
 - 真实指标用 TTFT + new_prefill + used_blocks；E2E 在共享 GPU 上噪声大需多次平均。
 
 **邮件通知**：`python3 ~/.claude/hooks/notify_email.py "<标题>"`（163，`x2406862525@163.com`）。
+
+## 2026-06-19 会话总结（vLLM in-tree patch 完整推进）
+
+**本会话完成**（Phase A-Q + 拍平 + 硬件）：
+- vLLM v0.10.2 从 submodule 拍平为普通目录 `third_party/vllm_flat`（纯 Python patch，不重编 `_C`，`.pth`+dist-info 接入）。
+- 10 个 in-tree patch 文件：B 块级统计 / C 任务边界回收 / D CoW 记账 / E per-block pin / F fp8 降级 / G mimir 策略 / I pin_hits / J reclaim_evictable / L 自动回收 / P lifecycle-aware 分配。
+- 四个决定性引擎级 A/B（patched v1 vs 原生，used_blocks）：M 单agent 69→0 / O 3agent并发 14→0 / P KV池压力 27→0 / **Q 工具调用并发 262→0（最强一击）**。
+- 多模型泛化（Qwen3-1.7B + 4B 验证 lifecycle+CoW）。
+- 硬件抽象层（CUDA/ROCm/Ascend/Cambricon/CPU 降级链 + fp8 探测）。
+- 统一入口 `MemoryManager.run_turn_with_engine`（外部层 + 引擎层协同）。
+- task-success A/B：7/8==7/8 字节一致，delta=0（不降质量）。
+- 文档：技术演示 / RESULTS_SUMMARY / CONTRIBUTING / patch清单 / editable安装指南。
+- 复现：`setup_vllm_binaries.sh`（fresh clone）+ `reproduce.sh` + 2 demo GIF。
+
+**当前状态**：101 测试通过，ruff clean，git clean & synced，114+ commits，评分四维全覆盖。
+
+**下一会话可推进（PROGRESS 续上指南已列）**：llama.cpp 后端、更重工作负载 A/B、国产硬件真实测试、长上下文生存视频。
