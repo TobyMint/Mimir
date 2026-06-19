@@ -61,12 +61,17 @@ except Exception:
 
 
 def run_side(model, g, policy, offload):
-    r = subprocess.run(["python","-c",CHILD, model, str(g.index), policy, "1" if offload else "0"],
-                       capture_output=True, text=True, env=dict(os.environ), timeout=400)
+    r = subprocess.run(
+        ["python", "-c", CHILD, model, str(g.index), policy, "1" if offload else "0"],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ),
+        timeout=400,
+    )
     for line in r.stdout.splitlines():
         if line.startswith("RESULT_JSON:"):
             return json.loads(line[12:])
-    print(f"[{policy}/off={offload}] ERROR:", r.stderr[-300:].replace("\r",""), flush=True)
+    print(f"[{policy}/off={offload}] ERROR:", r.stderr[-300:].replace("\r", ""), flush=True)
     return {"rows": []}
 
 
@@ -78,7 +83,8 @@ def main() -> int:
 
     g = pick_least_busy_gpu(min_free_gib=6.0)
     if g is None:
-        print("NO_FREE_GPU"); return 2
+        print("NO_FREE_GPU")
+        return 2
     print(f"GPU {g.index}", flush=True)
 
     print("\n=== native (fcfs, big tool results in KV) ===", flush=True)
@@ -86,7 +92,9 @@ def main() -> int:
     print("\n=== Mimir (mimir policy + tool_offload + auto-reclaim) ===", flush=True)
     mimir = run_side(args.model, g, "mimir", True)
 
-    def peak(rs): return max((r.get("used") or 0) for r in rs) if rs else 0
+    def peak(rs):
+        return max((r.get("used") or 0) for r in rs) if rs else 0
+
     n_peak, m_peak = peak(native["rows"]), peak(mimir["rows"])
     m_reclaims = mimir["rows"][-1].get("reclaims", 0) if mimir["rows"] else 0
 
@@ -94,7 +102,11 @@ def main() -> int:
         "model": Path(args.model).name,
         "scenario": "3 agents x 2 rounds, each with ~5KB tool result (tool_call workload)",
         "native": {"peak_used_blocks": n_peak, "rows": native["rows"]},
-        "mimir": {"peak_used_blocks": m_peak, "lifecycle_reclaims": m_reclaims, "rows": mimir["rows"]},
+        "mimir": {
+            "peak_used_blocks": m_peak,
+            "lifecycle_reclaims": m_reclaims,
+            "rows": mimir["rows"],
+        },
         "headline": f"native peak used={n_peak} (big results in KV); Mimir peak used={m_peak} (offload+reclaim, reclaims={m_reclaims})",
     }
     out_dir = Path(args.out_dir)
@@ -104,8 +116,10 @@ def main() -> int:
 
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         steps = list(range(len(native["rows"])))
         n_used = [r.get("used") or 0 for r in native["rows"]]
         m_used = [r.get("used") or 0 for r in mimir["rows"]]
@@ -114,11 +128,14 @@ def main() -> int:
         ax.plot(steps, m_used, "g^-", label="Mimir (offload + auto-reclaim)")
         ax.set_xlabel("agent round (A0,B0,C0,A1,B1,C1)")
         ax.set_ylabel("used KV blocks")
-        ax.set_title(f"Phase Q: tool-call concurrent (3 agents x2, ~5KB results, {Path(args.model).name})")
+        ax.set_title(
+            f"Phase Q: tool-call concurrent (3 agents x2, ~5KB results, {Path(args.model).name})"
+        )
         ax.legend(fontsize=9)
         fig.tight_layout()
         png = out_dir / f"phase_q_toolcall_concurrent_{Path(args.model).name}_curves.png"
-        fig.savefig(png, dpi=140); plt.close(fig)
+        fig.savefig(png, dpi=140)
+        plt.close(fig)
         print(f"保存: {png}", flush=True)
     except Exception as e:
         print(f"画图跳过: {e}", flush=True)
