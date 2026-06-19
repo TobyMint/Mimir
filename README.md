@@ -98,8 +98,9 @@ source scripts/activate_env.sh
 # 3. 一键复现验证（CPU 模式 ~2 分钟）
 make reproduce    # 或 bash scripts/reproduce.sh --quick
 
-# 4. 全量 Benchmark（需空闲单卡）
-make benchmark    # 或单跑：python scripts/run_phase_m_ab.py
+# 4. 全量 Benchmark（需空闲单卡）—— 最强一击 Q 262→0
+python scripts/run_phase_q_toolcall.py   # 工具调用并发 A/B（3 agent × 2 轮，~5KB 返回）
+# 或：python scripts/run_phase_m_ab.py（单 agent 10 轮 69→0）
 ```
 
 ## 复现性说明
