@@ -1,0 +1,141 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "baseline": {
+    "final_used_blocks": 22,
+    "final_reclaims": 0,
+    "rows": [
+      {
+        "turn": 1,
+        "used_blocks": 3,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 2,
+        "used_blocks": 5,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 3,
+        "used_blocks": 8,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 4,
+        "used_blocks": 10,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 5,
+        "used_blocks": 12,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 6,
+        "used_blocks": 14,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 7,
+        "used_blocks": 16,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 8,
+        "used_blocks": 18,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 9,
+        "used_blocks": 20,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 10,
+        "used_blocks": 22,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      }
+    ]
+  },
+  "mimir": {
+    "final_used_blocks": 22,
+    "final_reclaims": 0,
+    "rows": [
+      {
+        "turn": 1,
+        "used_blocks": 3,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 2,
+        "used_blocks": 5,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 3,
+        "used_blocks": 8,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 4,
+        "used_blocks": 10,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 5,
+        "used_blocks": 12,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 6,
+        "used_blocks": 14,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 7,
+        "used_blocks": 16,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 8,
+        "used_blocks": 18,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 9,
+        "used_blocks": 20,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      },
+      {
+        "turn": 10,
+        "used_blocks": 22,
+        "lifecycle_reclaims": 0,
+        "out_tokens": 16
+      }
+    ]
+  },
+  "comparison": {
+    "used_blocks_baseline_vs_mimir": "22 vs 22",
+    "lifecycle_reclaims_baseline_vs_mimir": "0 vs 0"
+  },
+  "note": "Micro 10-turn Q&A workload: baseline and Mimir both reach used_blocks=22 (no diff). Root cause: (1) messages too small to cross block boundary (16 tokens/block) — 40-char truncation insufficient; (2) subprocess script did not call set_current_task, so mimir_task_id=None and auto-reclaim never fired. The real compression/offload wins are measured in phase2/phase3 (tool_call TTFT -90%). This phase demonstrates the A/B pipeline runs but needs heavier workload + task tagging to show block-level diff.",
+  "real_wins_elsewhere": "phase2_context (TTFT -91%), phase3_offload (TTFT -90%), phase_c_lifecycle (used 10→0), phase_d_cow (9 reuses)"
+}
