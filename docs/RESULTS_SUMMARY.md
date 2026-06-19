@@ -10,6 +10,7 @@
 | 单 agent 10 轮对话（Phase M） | **69**（累积） | **0**（reclaims=213） | mimir 策略每轮自动回收 |
 | 3 agent 并发 6 步（Phase O） | **14**（累积） | **0**（reclaims=24） | per-task 隔离 + 自动回收 |
 | KV 池压力 6 任务（Phase P） | **27**（累积） | **0**（reclaims=132） | lifecycle-aware 分配 + 自动回收 |
+| 工具调用并发 3agent×2轮（Phase Q） | **262**（大返回进KV） | **0**（offload+回收，reclaims=42） | tool_offload + 逐任务回收 |
 
 原生 vLLM KV 持续累积，Mimir 在任务边界主动回收，显存稳态为 0。
 

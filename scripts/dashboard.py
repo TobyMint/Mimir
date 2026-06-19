@@ -110,6 +110,7 @@ def comparison_panel() -> Panel:
         ("Phase M A/B", "10轮 used_blocks", "69 (原生)", "0 (Mimir)", "-100%"),
         ("Phase O 并发", "3agent峰值", "14 (原生)", "0 (Mimir)", "-100%"),
         ("Phase P 压力", "6任务used", "27 (原生)", "0 (Mimir)", "-100%"),
+        ("Phase Q 工具调用", "3agent×2", "262 (原生)", "0 (Mimir)", "-100%"),
     ]
     t = Table(title="baseline vs Mimir (真实数据)", expand=True)
     t.add_column("方向", style="cyan")

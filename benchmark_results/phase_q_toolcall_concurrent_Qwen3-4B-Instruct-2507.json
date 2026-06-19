@@ -1,0 +1,88 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "scenario": "3 agents x 2 rounds, each with ~5KB tool result (tool_call workload)",
+  "native": {
+    "peak_used_blocks": 262,
+    "rows": [
+      {
+        "agent": "A",
+        "rnd": 0,
+        "used": 45,
+        "reclaims": 0
+      },
+      {
+        "agent": "A",
+        "rnd": 1,
+        "used": 88,
+        "reclaims": 0
+      },
+      {
+        "agent": "B",
+        "rnd": 0,
+        "used": 132,
+        "reclaims": 0
+      },
+      {
+        "agent": "B",
+        "rnd": 1,
+        "used": 175,
+        "reclaims": 0
+      },
+      {
+        "agent": "C",
+        "rnd": 0,
+        "used": 219,
+        "reclaims": 0
+      },
+      {
+        "agent": "C",
+        "rnd": 1,
+        "used": 262,
+        "reclaims": 0
+      }
+    ]
+  },
+  "mimir": {
+    "peak_used_blocks": 0,
+    "lifecycle_reclaims": 42,
+    "rows": [
+      {
+        "agent": "A",
+        "rnd": 0,
+        "used": 0,
+        "reclaims": 7
+      },
+      {
+        "agent": "A",
+        "rnd": 1,
+        "used": 0,
+        "reclaims": 14
+      },
+      {
+        "agent": "B",
+        "rnd": 0,
+        "used": 0,
+        "reclaims": 21
+      },
+      {
+        "agent": "B",
+        "rnd": 1,
+        "used": 0,
+        "reclaims": 28
+      },
+      {
+        "agent": "C",
+        "rnd": 0,
+        "used": 0,
+        "reclaims": 35
+      },
+      {
+        "agent": "C",
+        "rnd": 1,
+        "used": 0,
+        "reclaims": 42
+      }
+    ]
+  },
+  "headline": "native peak used=262 (big results in KV); Mimir peak used=0 (offload+reclaim, reclaims=42)"
+}
