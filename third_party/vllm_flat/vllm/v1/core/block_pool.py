@@ -198,6 +198,16 @@ class BlockPool:
         Returns:
             A list of new block.
         """
+        # ---- Mimir patch (Phase P): 分配前主动回收 EVICTABLE 块 ----
+        # vLLM 默认仅在容量不足时由 LRU 被动淘汰 free_block_queue 里的缓存块。Mimir 先把
+        # 已结束任务标记为 EVICTABLE 的块物理释放（reset_hash + 回 free 队列），让真正需要淘汰时
+        # 优先腾出这些「任务残留」而非活跃任务的 KV。这是 lifecycle 感知淘汰接入了真实分配路径。
+        try:
+            self.mimir_reclaim_evictable()
+        except Exception:
+            pass
+        # ---- Mimir patch end ----
+
         if num_blocks > self.get_num_free_blocks():
             raise ValueError(
                 f"Cannot get {num_blocks} free blocks from the pool")
