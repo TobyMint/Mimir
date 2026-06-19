@@ -65,7 +65,8 @@ def main() -> int:
     )
     pre = eng.mimir_stats()
     print(
-        f"task_A done: used={pre.get('used_blocks')} reclaims={pre.get('mimir_lifecycle_reclaims')}",
+        f"task_A done: used={pre.get('used_blocks')} "
+        f"reclaims={pre.get('mimir_lifecycle_reclaims')}",
         flush=True,
     )
 
@@ -75,8 +76,10 @@ def main() -> int:
         1 for v in eng.mimir_block_pool().mimir_block_lifecycle.values() if v == "evictable"
     )
     print(
-        f"after finish_task(A): reclaimed_now={reclaimed_task} used={after_finish.get('used_blocks')} "
-        f"reclaims={after_finish.get('mimir_lifecycle_reclaims')} evictable_marked={n_evictable}",
+        f"after finish_task(A): reclaimed={reclaimed_task} "
+        f"used={after_finish.get('used_blocks')} "
+        f"reclaims={after_finish.get('mimir_lifecycle_reclaims')} "
+        f"evictable={n_evictable}",
         flush=True,
     )
 
@@ -97,7 +100,8 @@ def main() -> int:
         "reclaim_evictable_swept": reclaimed_sweep,
         "final_used_blocks": post.get("used_blocks"),
         "total_mimir_lifecycle_reclaims": post.get("mimir_lifecycle_reclaims"),
-        "interpretation": "mimir_reclaim_evictable closes the loop: blocks that finish_task could not immediately free (still referenced) get marked EVICTABLE and are swept at the pressure point.",
+        "interpretation": "mimir_reclaim_evictable closes the loop: finish_task marks "
+        "still-referenced blocks EVICTABLE; reclaim sweeps them at pressure points.",
     }
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
