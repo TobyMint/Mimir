@@ -1,0 +1,25 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "speculative": "ngram(num_spec=5)",
+  "no_spec": {
+    "avg_e2e_s": 3.385,
+    "avg_output_tokens": 256.0,
+    "throughput_tok_per_s": 75.6,
+    "times": [
+      3.695,
+      3.229,
+      3.232
+    ]
+  },
+  "ngram_spec_on": {
+    "avg_e2e_s": 3.368,
+    "avg_output_tokens": 256.0,
+    "throughput_tok_per_s": 76.0,
+    "times": [
+      3.686,
+      3.21,
+      3.208
+    ]
+  },
+  "throughput_speedup_x": 1.01
+}
