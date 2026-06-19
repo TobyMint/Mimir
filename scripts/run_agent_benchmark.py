@@ -25,7 +25,8 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from benchmarks.agent_loop import TASKS, run_agent_loop
+from benchmarks.agent_loop import TASKS
+
 from mimir.gpu import pick_least_busy_gpu
 
 CHILD = r"""
@@ -57,9 +58,24 @@ except Exception:
 
 def run_side(model, g, util, mlen, mtok, policy, offload, tool_kb):
     r = subprocess.run(
-        ["python", "-c", CHILD, model, str(g.index), str(util), str(mlen),
-         str(mtok), policy, "1" if offload else "0", str(tool_kb)],
-        capture_output=True, text=True, env=dict(os.environ), timeout=600)
+        [
+            "python",
+            "-c",
+            CHILD,
+            model,
+            str(g.index),
+            str(util),
+            str(mlen),
+            str(mtok),
+            policy,
+            "1" if offload else "0",
+            str(tool_kb),
+        ],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ),
+        timeout=600,
+    )
     for line in r.stdout.splitlines():
         if line.startswith("RESULT_JSON:"):
             return json.loads(line[12:])
@@ -89,11 +105,22 @@ def main() -> int:
 
     for label, policy, offload in [("native", "fcfs", False), ("mimir", "mimir", True)]:
         print(f"\n=== {label} ({policy}, offload={offload}) ===", flush=True)
-        results = run_side(args.model, g, args.gpu_memory_util, args.max_model_len,
-                           args.max_tokens, policy, offload, args.tool_kb)
+        results = run_side(
+            args.model,
+            g,
+            args.gpu_memory_util,
+            args.max_model_len,
+            args.max_tokens,
+            policy,
+            offload,
+            args.tool_kb,
+        )
         for r in results:
-            print(f"  {r['label']}: {r['num_steps']} steps, peak_used={r['peak_used_blocks']}, "
-                  f"tool_data={r['total_tool_data_bytes']}B, final={r['final_answer'][:60]}", flush=True)
+            print(
+                f"  {r['label']}: {r['num_steps']} steps, peak_used={r['peak_used_blocks']}, "
+                f"tool_data={r['total_tool_data_bytes']}B, final={r['final_answer'][:60]}",
+                flush=True,
+            )
         summary[label] = {"results": results}
 
     # Build comparison table
@@ -104,16 +131,18 @@ def main() -> int:
         task_name = n["label"].rsplit("_", 1)[0] if "_" in n["label"] else n["label"]
         n_peak = n.get("peak_used_blocks", 0)
         m_peak = m.get("peak_used_blocks", 0)
-        comparison.append({
-            "task": task_name,
-            "native_peak_used": n_peak,
-            "mimir_peak_used": m_peak,
-            "reduction_pct": round((1 - m_peak / n_peak) * 100, 1) if n_peak else 0,
-            "native_steps": n.get("num_steps", 0),
-            "mimir_steps": m.get("num_steps", 0),
-            "native_final": n.get("final_answer", "")[:80],
-            "mimir_final": m.get("final_answer", "")[:80],
-        })
+        comparison.append(
+            {
+                "task": task_name,
+                "native_peak_used": n_peak,
+                "mimir_peak_used": m_peak,
+                "reduction_pct": round((1 - m_peak / n_peak) * 100, 1) if n_peak else 0,
+                "native_steps": n.get("num_steps", 0),
+                "mimir_steps": m.get("num_steps", 0),
+                "native_final": n.get("final_answer", "")[:80],
+                "mimir_final": m.get("final_answer", "")[:80],
+            }
+        )
     summary["comparison"] = comparison
 
     out_dir = Path(args.out_dir)
@@ -124,6 +153,7 @@ def main() -> int:
     # Plot: step-by-step used_blocks for each task, native vs Mimir (English labels)
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
@@ -157,8 +187,10 @@ def main() -> int:
 
     print(f"\nJSON: {jp}")
     for c in comparison:
-        print(f"  {c['task']}: native peak={c['native_peak_used']} -> Mimir peak={c['mimir_peak_used']} "
-              f"({c['reduction_pct']}%)")
+        print(
+            f"  {c['task']}: native peak={c['native_peak_used']} -> Mimir peak={c['mimir_peak_used']} "
+            f"({c['reduction_pct']}%)"
+        )
     print("AGENT_BENCHMARK_OK")
     return 0
 
