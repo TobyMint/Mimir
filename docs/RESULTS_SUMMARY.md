@@ -26,6 +26,8 @@
 | 端到端 demo | 10 轮 new_prefill | 34 | 2 | **-94%** |
 | fp8 KV 量化 | KV 容量 | 1772 块 | 3659 块 | **2.06x** |
 
+> 长生命周期存活（Phase 5，分层存储）：baseline 第 5 轮 OOM，Mimir（GPU/HOST/DISK 三层）存活全部 20 轮 —— 见 ![分层存活曲线](benchmark_results/phase5_tiered_tier.png)
+
 ## vLLM 内核层 in-tree patch（patched v1，10 文件，纯 Python 不重编 _C）
 
 | Phase | patch | 引擎实测 |
