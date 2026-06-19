@@ -127,13 +127,31 @@ print("RESULT_JSON:"+json.dumps(rows))
 
     def run_side(policy: str, compress: bool, label: str):
         print(f"\n=== {label} ===", flush=True)
-        r = subprocess.run(["python","-c",CHILD, args.model, str(g.index), str(args.gpu_memory_util),
-                            str(args.max_model_len), str(args.max_tokens), policy, "1" if compress else "0"],
-                           capture_output=True, text=True, env=dict(os.environ), timeout=300)
+        r = subprocess.run(
+            [
+                "python",
+                "-c",
+                CHILD,
+                args.model,
+                str(g.index),
+                str(args.gpu_memory_util),
+                str(args.max_model_len),
+                str(args.max_tokens),
+                policy,
+                "1" if compress else "0",
+            ],
+            capture_output=True,
+            text=True,
+            env=dict(os.environ),
+            timeout=300,
+        )
         for line in r.stdout.splitlines():
             if line.startswith("RESULT_JSON:"):
-                rows = json.loads(line[len("RESULT_JSON:"):])
-                print(f"  {label} final: used={rows[-1]['used_blocks']} reclaims={rows[-1]['lifecycle_reclaims']}", flush=True)
+                rows = json.loads(line[len("RESULT_JSON:") :])
+                print(
+                    f"  {label} final: used={rows[-1]['used_blocks']} reclaims={rows[-1]['lifecycle_reclaims']}",
+                    flush=True,
+                )
                 return rows
         print(f"  {label} ERROR: {r.stderr[-200:]}", flush=True)
         return []

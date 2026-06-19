@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mimir.gpu import as_env, pick_least_busy_gpu
+from mimir.gpu import pick_least_busy_gpu
 
 CHILD = r"""
 import os, json, sys
@@ -55,12 +55,27 @@ print("RESULT_JSON:"+json.dumps(rows))
 
 def run_side(policy: str, g, args) -> list:
     import subprocess
-    r = subprocess.run(["python","-c",CHILD, args.model, str(g.index), str(args.gpu_memory_util),
-                        str(args.max_model_len), str(args.max_tokens), policy],
-                       capture_output=True, text=True, env=dict(os.environ), timeout=400)
+
+    r = subprocess.run(
+        [
+            "python",
+            "-c",
+            CHILD,
+            args.model,
+            str(g.index),
+            str(args.gpu_memory_util),
+            str(args.max_model_len),
+            str(args.max_tokens),
+            policy,
+        ],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ),
+        timeout=400,
+    )
     for line in r.stdout.splitlines():
         if line.startswith("RESULT_JSON:"):
-            return json.loads(line[len("RESULT_JSON:"):])
+            return json.loads(line[len("RESULT_JSON:") :])
     print("ERROR:", r.stderr[-300:], flush=True)
     return []
 
@@ -76,7 +91,8 @@ def main() -> int:
 
     g = pick_least_busy_gpu(min_free_gib=6.0)
     if g is None:
-        print("NO_FREE_GPU"); return 2
+        print("NO_FREE_GPU")
+        return 2
     print(f"GPU {g.index}", flush=True)
 
     print("\n=== native (fcfs, KV accumulates) ===", flush=True)
@@ -84,17 +100,26 @@ def main() -> int:
     print("\n=== Mimir (per-task auto-reclaim) ===", flush=True)
     mimir = run_side("mimir", g, args)
 
-    def peak(rows): return max((r.get("used_blocks") or 0) for r in rows) if rows else 0
-    def final(rows): return (rows[-1].get("used_blocks") if rows else 0) or 0
+    def peak(rows):
+        return max((r.get("used_blocks") or 0) for r in rows) if rows else 0
+
+    def final(rows):
+        return (rows[-1].get("used_blocks") if rows else 0) or 0
+
     n_peak, m_peak = peak(native), peak(mimir)
     n_final, m_final = final(native), final(mimir)
-    m_reclaims = (mimir[-1].get("lifecycle_reclaims") if mimir else 0)
+    m_reclaims = mimir[-1].get("lifecycle_reclaims") if mimir else 0
 
     summary = {
         "model": Path(args.model).name,
         "scenario": "3 agents (A/B/C) interleaved 6 steps on one GPU",
         "native": {"peak_used_blocks": n_peak, "final_used_blocks": n_final, "rows": native},
-        "mimir": {"peak_used_blocks": m_peak, "final_used_blocks": m_final, "lifecycle_reclaims": m_reclaims, "rows": mimir},
+        "mimir": {
+            "peak_used_blocks": m_peak,
+            "final_used_blocks": m_final,
+            "lifecycle_reclaims": m_reclaims,
+            "rows": mimir,
+        },
         "headline": f"native peak={n_peak} vs Mimir peak={m_peak} (reclaims={m_reclaims})",
     }
     out_dir = Path(args.out_dir)
@@ -104,8 +129,10 @@ def main() -> int:
 
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         steps = [r["step"] for r in native]
         n_used = [r.get("used_blocks") or 0 for r in native]
         m_used = [r.get("used_blocks") or 0 for r in mimir]
@@ -114,11 +141,14 @@ def main() -> int:
         ax.plot(steps, m_used, "g^-", label="Mimir (per-task auto-reclaim)")
         ax.set_xlabel("agent step (A,B,C,A,B,C)")
         ax.set_ylabel("used KV blocks")
-        ax.set_title(f"Phase O: concurrent multi-agent (3 agents interleaved, {Path(args.model).name})")
+        ax.set_title(
+            f"Phase O: concurrent multi-agent (3 agents interleaved, {Path(args.model).name})"
+        )
         ax.legend(fontsize=9)
         fig.tight_layout()
         png = out_dir / f"phase_o_concurrent_{Path(args.model).name}_curves.png"
-        fig.savefig(png, dpi=140); plt.close(fig)
+        fig.savefig(png, dpi=140)
+        plt.close(fig)
         print(f"保存: {png}", flush=True)
     except Exception as e:
         print(f"画图跳过: {e}", flush=True)
