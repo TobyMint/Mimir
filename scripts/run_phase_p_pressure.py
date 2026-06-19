@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mimir.gpu import as_env, pick_least_busy_gpu
+from mimir.gpu import pick_least_busy_gpu
 
 CHILD = r"""
 import os, json, sys, traceback
@@ -53,12 +53,17 @@ except Exception:
 
 
 def run_side(model, g, util, policy):
-    r = subprocess.run(["python","-c",CHILD, model, str(g.index), str(util), policy],
-                       capture_output=True, text=True, env=dict(os.environ), timeout=300)
+    r = subprocess.run(
+        ["python", "-c", CHILD, model, str(g.index), str(util), policy],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ),
+        timeout=300,
+    )
     for line in r.stdout.splitlines():
         if line.startswith("RESULT_JSON:"):
             return json.loads(line[12:])
-    print(f"[{policy}] ERROR:", r.stderr[-300:].replace("\r",""), flush=True)
+    print(f"[{policy}] ERROR:", r.stderr[-300:].replace("\r", ""), flush=True)
     return {"total_blocks": None, "rows": []}
 
 
@@ -71,7 +76,8 @@ def main() -> int:
 
     g = pick_least_busy_gpu(min_free_gib=8.0)
     if g is None:
-        print("NO_FREE_GPU"); return 2
+        print("NO_FREE_GPU")
+        return 2
     print(f"GPU {g.index}", flush=True)
 
     native = run_side(args.model, g, args.gpu_memory_util, "fcfs")
@@ -86,7 +92,11 @@ def main() -> int:
         "scenario": "6 long-context tasks filling a small KV pool (lifecycle-aware allocation pressure)",
         "kv_pool_total_blocks": native.get("total_blocks"),
         "native": {"final_used_blocks": n_final, "rows": native["rows"]},
-        "mimir": {"final_used_blocks": m_final, "lifecycle_reclaims": m_reclaims, "rows": mimir["rows"]},
+        "mimir": {
+            "final_used_blocks": m_final,
+            "lifecycle_reclaims": m_reclaims,
+            "rows": mimir["rows"],
+        },
         "headline": f"native used accumulates to {n_final} (reclaims=0); Mimir holds used=0 (reclaims={m_reclaims}) under KV pressure",
     }
     out_dir = Path(args.out_dir)
@@ -96,8 +106,10 @@ def main() -> int:
 
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
+
         tasks = [r["task"] for r in native["rows"]]
         n_used = [r["used"] or 0 for r in native["rows"]]
         m_used = [r["used"] or 0 for r in mimir["rows"]]
@@ -106,11 +118,14 @@ def main() -> int:
         ax.plot(tasks, m_used, "g^-", label="Mimir (lifecycle reclaim, steady)")
         ax.set_xlabel("task (sequential, fills KV pool)")
         ax.set_ylabel("used KV blocks")
-        ax.set_title(f"Phase P: KV-pool pressure (6 tasks, ~{native.get('total_blocks')} block pool, {Path(args.model).name})")
+        ax.set_title(
+            f"Phase P: KV-pool pressure (6 tasks, ~{native.get('total_blocks')} block pool, {Path(args.model).name})"
+        )
         ax.legend(fontsize=9)
         fig.tight_layout()
         png = out_dir / f"phase_p_pressure_{Path(args.model).name}_curves.png"
-        fig.savefig(png, dpi=140); plt.close(fig)
+        fig.savefig(png, dpi=140)
+        plt.close(fig)
         print(f"保存: {png}", flush=True)
     except Exception as e:
         print(f"画图跳过: {e}", flush=True)
