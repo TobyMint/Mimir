@@ -14,10 +14,14 @@
 - [x] **Phase 8 — 定点 patch vLLM**：选最高收益特性改内核、重编译、测增量。报告「我们修改了 vLLM 内核」。
 - [x] **Phase 9 — 博眼球层**：实时内存仪表盘（Web/TUI）+ matplotlib 图表 + 端到端 demo（基线 OOM vs Mimir）+ 动图/短视频。
 - [x] **Phase 10 — 收尾**：一键复现 + 全测试覆盖 + 四份文档定稿（真实数字）+ 仓库整洁。
+- [x] **Phase R — TTFT 可观测**：v1 `RequestOutput.metrics` 恒 None，in-tree patch 用 `RequestState.stats` 回填 TTFT；`disable_log_stats=False` 保活 stat pipeline。
+- [x] **Phase DeepSeek — 真实轨迹 + LLM-judge**：DeepSeek V4 Pro 产真实 agent 轨迹作 benchmark 工作负载；DeepSeek-flash 作裁判量化压缩保真度（替代「≈持平」手 wave）。
+- [x] **Phase BC — 创新核心：block-class 类别感知 KV 管理**【夺冠差异化】：给 KV 块打语义类别标签（system/user/reasoning/tool_result），按类别优先级淘汰——tool_result/system 0 损失、reasoning 优先回收。5 单测 + 真实引擎演示 + probe 召回佐证。
 
 ## 指标口径（固定，对应 docs/测试报告.md §4）
 
-`peak_gpu_memory_gb`（核心）、`ttft_ms`、`e2e_latency_s`、`throughput_tok_per_s`、`task_success_rate`。
+`used_blocks`（核心，优化敏感）、`new_prefill_tokens`、`ttft_ms`、`e2e_latency_s`、`throughput_tok_per_s`、`task_success_rate`；
+`peak_gpu_mem_alloc_gib` 仅反映 vLLM 预分配固定 KV 池（≈11.6 GiB @ util=0.55），不随优化变，不作核心证据。
 **优化前后同一硬件配置、同一模型、同一 seed。**
 
 ## 消融实验（每个特性都要进）
