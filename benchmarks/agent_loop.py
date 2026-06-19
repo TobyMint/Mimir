@@ -20,6 +20,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from benchmarks.harness import _req_metrics
+
 
 @dataclass
 class AgentStepResult:
@@ -31,6 +33,7 @@ class AgentStepResult:
     tool_result_bytes: int
     used_blocks: int
     ttft_ms: float | None
+    new_prefill_tokens: int | None
     e2e_s: float
     total_context_msgs: int
 
@@ -68,6 +71,7 @@ class AgentRunResult:
                     "tool_result_bytes": s.tool_result_bytes,
                     "used_blocks": s.used_blocks,
                     "ttft_ms": s.ttft_ms,
+                    "new_prefill_tokens": s.new_prefill_tokens,
                     "e2e_s": round(s.e2e_s, 3),
                     "context_msgs": s.total_context_msgs,
                 }
@@ -231,10 +235,51 @@ def run_agent_loop(
         if callable(set_task):
             set_task(task_id)
 
-        # LLM 生成
+        # LLM 生成：优先用 chat_full（返回完整 RequestOutput，可读 TTFT / cached tokens）
+        # native（无 offload）在上下文超过 max_model_len 时会在这里抛 ValueError（context
+        # overflow）——这恰恰是 Mimir 要解决的问题。捕获后记录为 crash 步骤并结束该任务，
+        # 使 native 仍能产出「崩溃前」的曲线供 A/B 对照。
+        crashed_msg: str | None = None
         t0 = time.perf_counter()
-        text, n_tok = eng.chat(messages, max_tokens=max_tokens, temperature=0.0)
+        try:
+            if hasattr(eng, "chat_full"):
+                ro = eng.chat_full(messages, max_tokens=max_tokens, temperature=0.0)
+                text = ro.outputs[0].text
+                rm = _req_metrics(ro)
+                ttft = rm.get("ttft_ms")
+                np_tok = rm.get("num_prompt_tokens")
+                nc_tok = rm.get("num_cached_tokens", 0) or 0
+                new_prefill = (
+                    max(0, np_tok - nc_tok) if np_tok is not None else None
+                )
+            else:
+                # 兼容只实现 chat() 的 mock 引擎（CPU 测试用）
+                text, _ = eng.chat(messages, max_tokens=max_tokens, temperature=0.0)
+                ttft = None
+                new_prefill = None
+        except Exception as exc:  # noqa: BLE001
+            crashed_msg = str(exc)[:240] or exc.__class__.__name__
+            text = "[CRASHED]"
+            ttft = None
+            new_prefill = None
         t1 = time.perf_counter()
+
+        if crashed_msg is not None:
+            result.final_answer = f"(crashed: {crashed_msg})"
+            result.steps.append(
+                AgentStepResult(
+                    step=step_i,
+                    text="[CRASHED]",
+                    tool_called=None,
+                    tool_result_bytes=0,
+                    used_blocks=-1,
+                    ttft_ms=ttft,
+                    new_prefill_tokens=new_prefill,
+                    e2e_s=t1 - t0,
+                    total_context_msgs=len(messages),
+                )
+            )
+            break
 
         # 读引擎统计
         stats = {}
@@ -253,7 +298,8 @@ def run_agent_loop(
             tool_called=tool_name,
             tool_result_bytes=0,
             used_blocks=used,
-            ttft_ms=stats.get("first_ttft_ms") or None,
+            ttft_ms=ttft,
+            new_prefill_tokens=new_prefill,
             e2e_s=t1 - t0,
             total_context_msgs=len(messages),
         )

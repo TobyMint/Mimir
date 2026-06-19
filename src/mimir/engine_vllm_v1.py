@@ -101,6 +101,11 @@ class VLLMEngineV1(VLLMEngine):
         }
         if c.kv_cache_dtype:
             kwargs["kv_cache_dtype"] = c.kv_cache_dtype
+        # Keep v1's request-level stat pipeline alive so per-request timing
+        # (arrival/first_token/scheduled/last_token) is tracked — needed for
+        # TTFT observability (the in-tree Phase R patch attaches these to
+        # RequestOutput.metrics). Stock LLM() force-disables log_stats; undo it.
+        kwargs.setdefault("disable_log_stats", False)
         kwargs.update(c.extra)
         t0 = time.perf_counter()
         self._llm = LLM(**kwargs)

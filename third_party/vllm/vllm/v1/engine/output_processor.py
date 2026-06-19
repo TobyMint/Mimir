@@ -22,6 +22,15 @@ from vllm.v1.engine.parallel_sampling import ParentRequest
 from vllm.v1.metrics.stats import (IterationStats, LoRARequestStates,
                                    RequestStateStats)
 
+# Mimir Phase R: surface per-request timing metrics on v1 RequestOutput.
+# Stock vLLM v1 builds RequestOutput without a `metrics=` argument, so
+# RequestOutput.metrics is always None on the InprocClient path (unlike v0).
+# v1's RequestStateAlready tracks RequestStateStats (arrival_time /
+# first_token_ts / scheduled_ts / last_token_ts) for its own stat logger —
+# Mimir attaches these as a RequestMetrics so latency (TTFT, prefill, decode,
+# e2e) is observable from the returned RequestOutput, mirroring v0 behavior.
+from vllm.sequence import RequestMetrics  # noqa: E402  (Mimir Phase R)
+
 
 class RequestOutputCollector:
     """
@@ -237,6 +246,33 @@ class RequestState:
         else:
             prompt_logprobs = self.logprobs_processor.prompt_logprobs
 
+        # Mimir Phase R: build a RequestMetrics from the request-level timing
+        # v1 already tracks, so latency is observable on the returned output
+        # (stock v1 leaves RequestOutput.metrics = None). Both timestamps are in
+        # the frontend wall-clock domain, matching how the v0 stat path reports
+        # TTFT; first_token_time - arrival_time == first_token_latency (s).
+        mimir_metrics = None
+        if self.stats is not None and self.stats.arrival_time:
+            st = self.stats
+            arrival = st.arrival_time
+            # first_token_latency is a wall-clock interval already; fold it onto
+            # the arrival_time so the delta reproduces the engine-measured TTFT.
+            first_tok = (
+                arrival + st.first_token_latency if st.first_token_latency else st.first_token_ts or None
+            )
+            last_tok = st.last_token_ts or None
+            mimir_metrics = RequestMetrics(
+                arrival_time=arrival,
+                last_token_time=last_tok if last_tok else arrival,
+                first_scheduled_time=st.scheduled_ts or None,
+                first_token_time=first_tok,
+                time_in_queue=(
+                    (st.scheduled_ts - st.queued_ts)
+                    if st.scheduled_ts and st.queued_ts
+                    else None
+                ),
+            )
+
         return RequestOutput(
             request_id=request_id,
             prompt=self.prompt,
@@ -246,6 +282,7 @@ class RequestState:
             finished=finished,
             kv_transfer_params=kv_transfer_params,
             num_cached_tokens=self.num_cached_tokens,
+            metrics=mimir_metrics,
         )
 
     def _new_completion_output(

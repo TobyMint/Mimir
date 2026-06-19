@@ -29,6 +29,8 @@ source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=
 | I | `vllm/v1/core/block_pool.py` | `mimir_pin_hits` 计数器（pin 阻止回收时增） | pin 阻止回收可观测 |
 | J | `vllm/v1/core/block_pool.py` | `mimir_reclaim_evictable()` 主动扫描回收所有 EVICTABLE 块（闭环：finish_task 标记 + reclaim 扫描） | 验证：finish_task 回收 3 块 used 3→0 |
 | L | `vllm/v1/core/sched/scheduler.py` | mimir 策略下 `_free_blocks` 自动调 `mimir_finish_task`（任务完成即回收，自驱动） | auto_reclaim_works=True（reclaims=2，无需外部调用） |
+| R | `vllm/v1/engine/output_processor.py` | `_new_request_output` 用 v1 `RequestState.stats`（arrival/first_token/scheduled/last_token）构造 `RequestMetrics` 挂到 `RequestOutput.metrics`（v1 原本恒为 None，无法观测 TTFT） | v1 每请求 TTFT/prefill/e2e 可读；agent-loop 每步 ttft 真实落盘 |
+| R | `src/mimir/engine_vllm_v1.py` | 构造时 `disable_log_stats=False`（v1 `LLM()` 默认强制 `True`，会关闭整个 stat pipeline，使 `RequestState.stats=None`） | 配合上面 patch，stats pipeline 保活 → TTFT 可观测 |
 
 ## 与同实验室 Continuum 的区别
 
