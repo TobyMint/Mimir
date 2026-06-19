@@ -1,6 +1,8 @@
 # Mimir — 面向智能体的内存管理系统
 
 > Mimir 取名自北欧神话中以智慧与记忆闻名者，寓意本项目聚焦于智能体推理过程中**记忆（KV Cache / 上下文）的管理与复用**。
+>
+> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — 两个决定性 A/B（used_blocks 69&14→0）、-91% TTFT、CoW -78.7%、多模型泛化。
 
 <p align="center">
   <b>研究创新赛道 · 面向智能体的内存管理系统设计与实现（高校赛题）</b>
