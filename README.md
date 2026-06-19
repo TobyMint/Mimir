@@ -96,7 +96,6 @@ make reproduce    # 或 bash scripts/reproduce.sh --quick
 # 4. 全量 Benchmark（需空闲单卡）
 make benchmark    # 或单跑：python scripts/run_phase_m_ab.py
 ```
-```
 
 ## 复现性说明
 
