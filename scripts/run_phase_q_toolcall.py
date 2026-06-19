@@ -1,10 +1,10 @@
-"""Phase Q：工具调用密集并发 A/B（赛题 tool_call 场景，最贴合）。
+"""Phase Q：工具调用密集Concurrent A/B（赛题 tool_call 场景，最贴合）。
 
-3 个 agent 并发，每个 agent 跑 2 轮工具调用（含大返回 ~5KB）：
+3 个 agent Concurrent，每个 agent 跑 2 轮工具调用（含大返回 ~5KB）：
 - native：fcfs，大工具返回全量进 KV，3 agent × 2 轮 KV 累积
-- Mimir：mimir 策略 + tool_offload（大返回外置，上下文留引用）+ 逐任务自动回收
+- Mimir：mimir 策略 + tool_offload（大返回Offload，上下文留引用）+ 逐Task自动Reclaim
 
-度量：峰值 used_blocks、TTFT（大返回导致 native prefill 重）、reclaims。
+度量：Peak used_blocks、TTFT（大返回导致 native prefill 重）、reclaims。
 输出：benchmark_results/phase_q_toolcall_concurrent_<model>.json + _curves.png
 
 用法：python scripts/run_phase_q_toolcall.py

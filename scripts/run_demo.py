@@ -1,11 +1,11 @@
-"""Phase 9 端到端 demo：baseline OOM vs Mimir 存活 + 更快。
+"""Phase 9 端到端 demo：baseline OOM vs Mimir Survival + 更快。
 
-跑一个真实的多轮 agent（vLLM），逐步增加轮次：
-- baseline：每轮全量上下文进入 KV，显存线性增长 -> 达到模拟上限「OOM」。
-- Mimir：上下文压缩 + 工具外置 + 分层，KV 增长被压住 -> 存活更久且更快。
+跑一个真实的多轮 agent（vLLM），逐步增加turn：
+- baseline：每轮全量上下文进入 KV，Memory线性增长 -> 达到模拟上限「OOM」。
+- Mimir：上下文Compress + 工具Offload + 分层，KV 增长被压住 -> Survival更久且更快。
 
-输出：console 实时对比 + benchmark_results/demo_<model>.json + _curves.png
-（PNG：baseline 显存曲线 vs Mimir 显存曲线，标 OOM 点）
+输出：console 实时Comparison + benchmark_results/demo_<model>.json + _curves.png
+（PNG：baseline MemoryCurve vs Mimir MemoryCurve，标 OOM 点）
 
 用法（mimir 环境）：
     python scripts/run_demo.py
@@ -28,7 +28,7 @@ from mimir.context.compressor import ContextCompressor, Fidelity
 from mimir.engine_vllm import EngineConfig, VLLMEngine
 from mimir.gpu import as_env, pick_least_busy_gpu
 
-# 模拟「显存上限」：用每轮 new_prefill 累计作为「显存压力」代理
+# 模拟「Memory上限」：用每轮 new_prefill 累计作为「Memory压力」代理
 # 超过 OOM_THRESHOLD 则判定 baseline 在该轮 OOM
 OOM_THRESHOLD_TOKENS = 4000
 
@@ -69,7 +69,7 @@ def run_progression(eng: VLLMEngine, *, compress: bool, max_turns: int, max_toke
             cumulative_new_prefill = 0
             ttft = None
             ok = False
-        # OOM 判定：本 demo 用「生成失败」标记 OOM；上下文增长差异由 new_prefill 曲线体现
+        # OOM 判定：本 demo 用「生成失败」标记 OOM；上下文增长差异由 new_prefill Curve体现
         history.append(
             {
                 "turn": n,
@@ -112,7 +112,7 @@ def main() -> int:
     _ = eng.llm
     print(f"engine_init={eng.engine_init_seconds:.1f}s", flush=True)
 
-    print("\n=== baseline（无压缩，全量进上下文）===", flush=True)
+    print("\n=== baseline（无Compress，全量进上下文）===", flush=True)
     base = run_progression(eng, compress=False, max_turns=args.turns, max_tokens=args.max_tokens)
     for h in base["history"]:
         print(
@@ -120,7 +120,7 @@ def main() -> int:
             flush=True,
         )
 
-    print("\n=== Mimir（上下文压缩 + 工具外置）===", flush=True)
+    print("\n=== Mimir（上下文Compress + 工具Offload）===", flush=True)
     opt = run_progression(eng, compress=True, max_turns=args.turns, max_tokens=args.max_tokens)
     for h in opt["history"]:
         print(
@@ -128,8 +128,8 @@ def main() -> int:
             flush=True,
         )
 
-    # 对比
-    print("\n=== 对比 ===", flush=True)
+    # Comparison
+    print("\n=== Comparison ===", flush=True)
     base_final = base["history"][-1]
     opt_final = opt["history"][-1]
     bn = base_final["new_prefill"]
@@ -137,7 +137,7 @@ def main() -> int:
     print(f"  末轮 new_prefill: baseline={bn}  Mimir={on}", flush=True)
     if base_final["new_prefill"] and opt_final["new_prefill"]:
         red = (1 - opt_final["new_prefill"] / base_final["new_prefill"]) * 100
-        print(f"  Mimir 上下文节省: {red:.1f}%", flush=True)
+        print(f"  Mimir 上下文saved: {red:.1f}%", flush=True)
 
     out_dir = Path(args.out_dir)
     summary = {
@@ -151,7 +151,7 @@ def main() -> int:
     json_path = out_dir / f"demo_{Path(args.model).name}.json"
     json_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 画曲线
+    # 画Curve
     try:
         import matplotlib
 
@@ -169,11 +169,11 @@ def main() -> int:
             color="r",
             linestyle=":",
             alpha=0.5,
-            label=f"OOM 阈值={OOM_THRESHOLD_TOKENS}",
+            label=f"OOM threshold={OOM_THRESHOLD_TOKENS}",
         )
-        ax.set_xlabel("agent 轮次")
-        ax.set_ylabel("单轮新增 prefill tokens")
-        ax.set_title(f"端到端 demo：baseline vs Mimir 上下文增长 ({Path(args.model).name})")
+        ax.set_xlabel("agent turn")
+        ax.set_ylabel("New prefill tokens per turn")
+        ax.set_title(f"Demo: baseline vs Mimir context growth ({Path(args.model).name})")
         ax.legend(fontsize=9)
         fig.tight_layout()
         png = out_dir / f"demo_{Path(args.model).name}_curves.png"

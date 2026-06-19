@@ -3,8 +3,8 @@
 
 在 Qwen3-1.7B / Qwen3-4B-Instruct-2507 / Qwen3-8B 上跑相同的 Mimir 生命周期+CoW 验证，
 证明 vLLM in-tree patch 跨模型规模生效：
-- 生命周期回收：跑 2 任务，调 mimir_finish_task，看 used_blocks 下降
-- CoW 复用：跑 2 分支共享前缀，看 mimir_cow_reuses 增长
+- 生命周期Reclaim：跑 2 Task，调 mimir_finish_task，看 used_blocks 下降
+- CoW Reuse：跑 2 分支共享前缀，看 mimir_cow_reuses 增长
 
 输出：benchmark_results/phase_k_multimodel.json
 
@@ -67,7 +67,7 @@ print("RESULT_JSON:" + json.dumps({
 
 
 def verify_model(name: str, path: str, g, max_tokens: int) -> dict:
-    """在子进程中跑（完全释放显存），避免多模型叠加 OOM。"""
+    """在子进程中跑（完全释放Memory），避免多模型叠加 OOM。"""
     import subprocess
 
     print(f"\n=== {name} ===", flush=True)

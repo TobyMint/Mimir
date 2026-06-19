@@ -1,12 +1,12 @@
-"""Phase 2 evaluation：baseline vs context-compression 对比。
+"""Phase 2 evaluation：baseline vs context-compression Comparison。
 
-在相同硬件/模型上跑同一工作流的两种版本，采集真实指标对比：
-- baseline：原始工作流（不压缩）
-- context_compress：用 ``ContextCompressor`` 压缩后跑（BALANCED）
+在相同硬件/模型上跑同一工作流的两种版本，采集真实指标Comparison：
+- baseline：原始工作流（不Compress）
+- context_compress：用 ``ContextCompressor`` Compress后跑（BALANCED）
 
 输出：
 - benchmark_results/phase2_context_<model>.json
-- benchmark_results/phase2_context_<model>.png  （KV/TTFT 对比图 + 压缩率）
+- benchmark_results/phase2_context_<model>.png  （KV/TTFT Comparison图 + Compress率）
 
 用法（mimir 环境）：
     python scripts/run_phase2_context.py [--fidelity balanced|aggressive|lossless]
@@ -95,7 +95,7 @@ def main() -> int:
             f"mem={mem2:.2f}GiB cached={cached2}",
             flush=True,
         )
-        # 对比
+        # Comparison
         if m_base.ttft_ms and m_opt.ttft_ms:
             print(
                 f"  -> TTFT {m_base.ttft_ms:.1f} -> {m_opt.ttft_ms:.1f} ms "
@@ -119,12 +119,12 @@ def main() -> int:
     plot_kv_mem_comparison(
         results,
         out_dir / f"phase2_context_{tag}_mem.png",
-        title=f"Phase 2 上下文压缩：峰值显存 ({fidelity.value})",
+        title=f"Phase 2 上下文Compress：PeakMemory ({fidelity.value})",
     )
     plot_latency_comparison(
         results,
         out_dir / f"phase2_context_{tag}_lat.png",
-        title=f"Phase 2 上下文压缩：延迟 ({fidelity.value})",
+        title=f"Phase 2 上下文Compress：Latency ({fidelity.value})",
     )
     print(f"\n保存: {json_path}")
     print(f"保存: {out_dir / f'phase2_context_{tag}_mem.png'}")

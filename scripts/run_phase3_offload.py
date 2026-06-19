@@ -1,7 +1,7 @@
-"""Phase 3 evaluation：baseline vs tool-data-offload 对比。
+"""Phase 3 evaluation：baseline vs tool-data-offload Comparison。
 
-把工具调用的大返回外置（``ToolDataStore``），上下文只放引用+摘要，避免大块进入 KV。
-在相同硬件/模型上对比 baseline（全量进上下文）vs offload。
+把工具调用的大返回Offload（``ToolDataStore``），上下文只放引用+摘要，避免大块进入 KV。
+在相同硬件/模型上Comparison baseline（全量进上下文）vs offload。
 
 输出：
 - benchmark_results/phase3_offload_<model>.json
@@ -113,10 +113,12 @@ def main() -> int:
         json.dumps(offload_stats, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     plot_kv_mem_comparison(
-        results, out_dir / f"phase3_offload_{tag}_mem.png", title="Phase 3 工具数据外置：峰值显存"
+        results,
+        out_dir / f"phase3_offload_{tag}_mem.png",
+        title="Phase 3 工具数据Offload：PeakMemory",
     )
     plot_latency_comparison(
-        results, out_dir / f"phase3_offload_{tag}_lat.png", title="Phase 3 工具数据外置：延迟"
+        results, out_dir / f"phase3_offload_{tag}_lat.png", title="Phase 3 工具数据Offload：Latency"
     )
     print(f"\n保存: {json_path}")
     print(f"保存: {out_dir / f'phase3_offload_{tag}_mem.png'}")

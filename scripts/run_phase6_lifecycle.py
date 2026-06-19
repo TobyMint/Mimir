@@ -1,10 +1,10 @@
 """Phase 6 evaluation：生命周期感知淘汰 vs 纯 LRU（对照 vLLM APC）。
 
-跑一段多任务 agent 访问 trace，对比：
-- LifecycleEvictor（任务结束主动回收）
+跑一段多Task agent 访问 trace，Comparison：
+- LifecycleEvictor（Task结束主动Reclaim）
 - PureLRUEvictor（vLLM APC 风格，仅 LRU）
 
-度量：命中率、回收块数、淘汰块数、容量压力下的存活。
+度量：Hit Rate、Reclaim块数、淘汰块数、容量压力下的Survival。
 输出：benchmark_results/phase6_lifecycle.json + _cmp.png
 
 用法（纯 CPU，不需 GPU）：
@@ -64,16 +64,16 @@ def main() -> int:
             "lifecycle_reclaims": s_lru.lifecycle_reclaims,
         },
     }
-    # 任务块总数（理论上若无容量限制会驻留的总块数）
+    # Task块总数（理论上若无容量限制会驻留的总块数）
     total_blocks = args.tasks * args.blocks_per_task
     summary["lifecycle_reclaim_pct"] = round(s_lc.lifecycle_reclaims / total_blocks * 100, 1)
-    summary["lru_reclaim_pct"] = 0.0  # LRU 不主动回收
+    summary["lru_reclaim_pct"] = 0.0  # LRU 不主动Reclaim
     summary["hit_rate_delta_pct"] = round((s_lc.hit_rate - s_lru.hit_rate) * 100, 2)
 
     print("=== Phase 6 生命周期淘汰 vs 纯 LRU ===", flush=True)
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
 
-    # 画对比图
+    # 画Comparison图
     try:
         import matplotlib
 
@@ -81,7 +81,7 @@ def main() -> int:
         import matplotlib.pyplot as plt
         import numpy as np
 
-        labels = ["命中率", "回收块数", "淘汰块数(被动)"]
+        labels = ["Hit Rate", "Reclaim块数", "淘汰块数(被动)"]
         lc_vals = [s_lc.hit_rate * 100, s_lc.lifecycle_reclaims, s_lc.evictions]
         lru_vals = [s_lru.hit_rate * 100, s_lru.lifecycle_reclaims, s_lru.evictions]
         x = np.arange(len(labels))

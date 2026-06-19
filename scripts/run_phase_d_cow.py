@@ -1,8 +1,8 @@
-"""Phase D 评测：v1 引擎实测的分支 CoW 复用 vs Mimir BranchTree 预测。
+"""Phase D 评测：v1 引擎实测的分支 CoW Reuse vs Mimir BranchTree 预测。
 
 跑 N 个分支（共享 system+user 前缀 + 各分支独有 seed），度量：
-- v1 引擎实测：mimir_cow_reuses（跨分支复用块数）
-- Mimir BranchTree 预测：cow_savings 的复用比例
+- v1 引擎实测：mimir_cow_reuses（跨分支Reuse块数）
+- Mimir BranchTree 预测：cow_savings 的Reuse比例
 两者应趋势一致（引擎是 ground truth，BranchTree 是预测投影）。
 
 输出：benchmark_results/phase_d_cow_<model>.json

@@ -1,11 +1,11 @@
 """Phase P：KV 池压力 A/B（lifecycle-aware allocation 接入真实分配路径）。
 
-小 KV 池（低 gpu_memory_utilization）+ 6 个长上下文任务连续跑，施压 KV 池：
-- fcfs：原生 LRU，KV 累积（reclaims=0，被动淘汰）
-- mimir：get_new_blocks 前主动回收 EVICTABLE（Phase P）+ 任务完成自动回收（Phase L），
+小 KV 池（低 gpu_memory_utilization）+ 6 个长上下文Task连续跑，施压 KV 池：
+- fcfs：native LRU，KV 累积（reclaims=0，被动淘汰）
+- mimir：get_new_blocks 前主动Reclaim EVICTABLE（Phase P）+ Task完成自动Reclaim（Phase L），
   used_blocks 守恒为 0，reclaims 累计
 
-度量：每任务 used_blocks、累计 reclaims。
+度量：每Task used_blocks、累计 reclaims。
 输出：benchmark_results/phase_p_pressure_<model>.json + _curves.png
 
 用法：python scripts/run_phase_p_pressure.py

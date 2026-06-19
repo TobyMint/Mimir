@@ -1,7 +1,7 @@
-"""Phase J 评测：lifecycle-aware 主动回收闭环（mimir_reclaim_evictable）。
+"""Phase J 评测：lifecycle-aware 主动Reclaim闭环（mimir_reclaim_evictable）。
 
-场景：任务 A 跑完，部分块仍被引用 -> mimir_finish_task 把它们标记 EVICTABLE（无法立即回收）。
-显存压力点调 mimir_reclaim_evictable()，把所有 EVICTABLE 且 ref_cnt==0 的块物理释放。
+场景：Task A 跑完，部分块仍被引用 -> mimir_finish_task 把它们标记 EVICTABLE（无法立即Reclaim）。
+Memory压力点调 mimir_reclaim_evictable()，把所有 EVICTABLE 且 ref_cnt==0 的块物理释放。
 度量：reclaim_evictable 前后 used_blocks 与 mimir_lifecycle_reclaims。
 
 输出：benchmark_results/phase_j_reclaim_evictable_<model>.json
@@ -54,7 +54,7 @@ def main() -> int:
     print(f"engine_init={eng.engine_init_seconds:.1f}s", flush=True)
 
     SYS = "You are a research agent. Answer about KV cache memory management briefly."
-    # 任务 A 跑（产生块；finish_task 把仍引用的块标记 EVICTABLE）
+    # Task A 跑（产生块；finish_task 把仍引用的块标记 EVICTABLE）
     eng.set_current_task("task_A")
     eng.chat(
         [
@@ -83,7 +83,7 @@ def main() -> int:
         flush=True,
     )
 
-    # Phase J：主动扫描回收所有 EVICTABLE
+    # Phase J：主动扫描Reclaim所有 EVICTABLE
     reclaimed_sweep = eng.mimir_reclaim_evictable()
     post = eng.mimir_stats()
     print(

@@ -2,8 +2,8 @@
 
 在 SSH 会话里实时展示 Mimir 内存管理状态：
 - 三层存储（GPU/HOST/DISK）的冷热分布
-- KV 块生命周期分布（ACTIVE/EVICTABLE/PINNED）
-- 分支树结构 + CoW 节省
+- KV Block Lifecycle分布（ACTIVE/EVICTABLE/PINNED）
+- 分支树结构 + CoW saved
 - baseline vs optimized 显存/TTFT 对比
 
 两种模式：
@@ -58,10 +58,10 @@ def tier_panel(store: TieredStore) -> Panel:
         _line("HOST (温)", len(snap["host"]), total),
         _line("DISK (冷)", len(snap["disk"]), total),
         "",
-        f"promotions 冷→热: {st['promotions']}   "
-        f"demotions 热→冷: {st['demotions']}   disk_reads: {st['disk_reads']}",
+        f"promotions (cold->hot): {st['promotions']}   "
+        f"demotions (hot->cold): {st['demotions']}   disk_reads: {st['disk_reads']}",
     ]
-    return Panel("\n".join(lines), title="三层存储 (GPU/HOST/DISK)", border_style="cyan")
+    return Panel("\n".join(lines), title="Tiered Store (GPU/HOST/DISK)", border_style="cyan")
 
 
 def lifecycle_panel(evictor: LifecycleEvictor) -> Panel:
@@ -72,15 +72,15 @@ def lifecycle_panel(evictor: LifecycleEvictor) -> Panel:
     evictable = by.get("evictable", 0)
     pinned = by.get("pinned", 0)
     lines = [
-        f"ACTIVE    {_bar(active / total)}  {active:>3}  (进行中任务)",
-        f"EVICTABLE {_bar(evictable / total)}  {evictable:>3}  (可回收/任务已结束)",
-        f"PINNED    {_bar(pinned / total)}  {pinned:>3}  (常驻 system 前缀)",
+        f"ACTIVE    {_bar(active / total)}  {active:>3}  (active task)",
+        f"EVICTABLE {_bar(evictable / total)}  {evictable:>3}  (evictable (task done))",
+        f"PINNED    {_bar(pinned / total)}  {pinned:>3}  (pinned (system prefix))",
         "",
-        f"lifecycle_reclaims(主动): {evictor.stats.lifecycle_reclaims}  "
-        f"evictions(被动): {evictor.stats.evictions}  "
+        f"lifecycle reclaims: {evictor.stats.lifecycle_reclaims}  "
+        f"evictions (passive): {evictor.stats.evictions}  "
         f"hit_rate: {evictor.stats.hit_rate * 100:.1f}%",
     ]
-    return Panel("\n".join(lines), title="KV 块生命周期", border_style="magenta")
+    return Panel("\n".join(lines), title="KV Block Lifecycle", border_style="magenta")
 
 
 def branch_panel(tree_kind: str = "8×2") -> Panel:
@@ -88,13 +88,13 @@ def branch_panel(tree_kind: str = "8×2") -> Panel:
     s = tree.cow_savings()
     lines = [
         f"分支树: {tree_kind}  ({s['active_branches']} 活跃分支)",
-        f"朴素 KV (无共享): {s['naive_kv_tokens']} tokens",
-        f"CoW  KV (共享前缀): {s['cow_kv_tokens']} tokens",
-        f"节省: {s['saved_tokens']} tokens  ({s['savings_pct']}%)",
+        f"Naive KV (no sharing): {s['naive_kv_tokens']} tokens",
+        f"CoW KV (shared prefix): {s['cow_kv_tokens']} tokens",
+        f"saved: {s['saved_tokens']} tokens  ({s['savings_pct']}%)",
         "",
-        f"{_bar(1 - s['cow_kv_tokens'] / max(1, s['naive_kv_tokens']))}  CoW 相对朴素 KV 占用",
+        f"{_bar(1 - s['cow_kv_tokens'] / max(1, s['naive_kv_tokens']))}  CoW vs naive KV usage",
     ]
-    return Panel("\n".join(lines), title="分支 CoW 树", border_style="green")
+    return Panel("\n".join(lines), title="Branch CoW Tree", border_style="green")
 
 
 def comparison_panel() -> Panel:
@@ -105,14 +105,14 @@ def comparison_panel() -> Panel:
         ("工具数据外置", "tool_call TTFT", "304ms", "29ms", "-90%"),
         ("分支 CoW", "KV tokens", "7040", "1500", "-78.7%"),
         ("分层存储", "存活轮次", "4/20", "20/20", "OOM→存活"),
-        ("生命周期淘汰", "主动回收", "0%", "100%", "+100%"),
+        ("生命周期淘汰", " reclaimed", "0%", "100%", "+100%"),
         ("fp8 KV 量化", "KV 容量", "1772块", "3659块", "2.06x"),
         ("Phase M A/B", "10轮 used_blocks", "69 (原生)", "0 (Mimir)", "-100%"),
         ("Phase O 并发", "3agent峰值", "14 (原生)", "0 (Mimir)", "-100%"),
         ("Phase P 压力", "6任务used", "27 (原生)", "0 (Mimir)", "-100%"),
         ("Phase Q 工具调用", "3agent×2", "262 (原生)", "0 (Mimir)", "-100%"),
     ]
-    t = Table(title="baseline vs Mimir (真实数据)", expand=True)
+    t = Table(title="Baseline vs Mimir (measured)", expand=True)
     t.add_column("方向", style="cyan")
     t.add_column("指标", style="white")
     t.add_column("baseline", style="red")
@@ -120,7 +120,7 @@ def comparison_panel() -> Panel:
     t.add_column("Δ", style="yellow")
     for d, m, b, o, dlt in rows:
         t.add_row(d, m, b, o, dlt)
-    return Panel(t, title="优化效果汇总", border_style="yellow")
+    return Panel(t, title="Optimization Results", border_style="yellow")
 
 
 def make_layout(store: TieredStore, evictor: LifecycleEvictor) -> Layout:

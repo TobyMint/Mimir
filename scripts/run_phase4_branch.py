@@ -2,12 +2,12 @@
 
 构造一棵 ToT 分支树，在真实 vLLM 上跑各分支（共享 system+user 前缀 + 分支独有 token），
 度量：
-1. Mimir ``BranchTree`` 的 CoW 记账节省（朴素 vs CoW KV token）。
+1. Mimir ``BranchTree`` 的 CoW 记账saved（Naive vs CoW KV token）。
 2. vLLM APC 的真实前缀命中（num_cached_tokens）—— 验证共享在引擎层生效。
 3. 分支数对 TTFT / 新进 KV 的影响。
-4. 剪枝回收的账面收益。
+4. 剪枝Reclaim的账面收益。
 
-对比：分支推理「顺序跑」(每分支独立请求) vs「CoW 树」(显式共享前缀)。
+Comparison：分支推理「顺序跑」(每分支独立请求) vs「CoW 树」(显式共享前缀)。
 输出：benchmark_results/phase4_branch_<model>.json + _mem.png + _savings.json
 
 用法（mimir 环境）：
@@ -99,13 +99,13 @@ def main() -> int:
     print(f"\n=== CoW 记账（{args.branches} 分支 × depth {args.depth}）===", flush=True)
     print(json.dumps(savings, ensure_ascii=False, indent=2), flush=True)
 
-    # 剪枝一半分支，看回收
+    # 剪枝一半分支，看Reclaim
     active = [nid for nid in tree.nodes if not tree.nodes[nid].pruned and nid != 0]
     pruned_reclaim = 0
     for nid in active[: len(active) // 2]:
         pruned_reclaim += tree.prune(nid)
     after_prune = tree.cow_savings()
-    print(f"剪枝一半分支后回收 own tokens: {pruned_reclaim}", flush=True)
+    print(f"剪枝一半分支后Reclaim own tokens: {pruned_reclaim}", flush=True)
     print(json.dumps(after_prune, ensure_ascii=False, indent=2), flush=True)
 
     # 2) 真实 vLLM：跑各分支（共享前缀），度量 APC 命中 + TTFT
@@ -151,7 +151,7 @@ def main() -> int:
     )
     tot = total_cached + total_new
     reuse_pct = (total_cached / tot * 100) if tot else 0.0
-    print(f"APC 前缀复用率: {total_cached}/{tot} = {reuse_pct:.1f}%", flush=True)
+    print(f"APC 前缀Reuse率: {total_cached}/{tot} = {reuse_pct:.1f}%", flush=True)
 
     out_dir = Path(args.out_dir)
     json_path = out_dir / f"phase4_branch_{tag}.json"
@@ -175,7 +175,9 @@ def main() -> int:
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     plot_kv_mem_comparison(
-        results, out_dir / f"phase4_branch_{tag}_mem.png", title="Phase 4 分支 CoW：各分支峰值显存"
+        results,
+        out_dir / f"phase4_branch_{tag}_mem.png",
+        title="Phase 4 分支 CoW：各分支PeakMemory",
     )
     print(f"\n保存: {json_path}")
     print(f"保存: {out_dir / f'phase4_branch_{tag}_savings.json'}")

@@ -39,7 +39,7 @@ def plot_kv_mem_comparison(
     results: Sequence[RunMetrics],
     out_path: str | Path,
     *,
-    title: str = "KV Cache 显存占用对比",
+    title: str = "KV Cache Memory Comparison",
 ) -> str:
     """分组柱状图：每个工作流的 baseline vs optimized 峰值 KV 显存。"""
     grouped = _group(results)
@@ -60,7 +60,7 @@ def plot_kv_mem_comparison(
 
     ax.set_xticks(list(x))
     ax.set_xticklabels(workloads, rotation=15, ha="right")
-    ax.set_ylabel("峰值 KV 显存 (GiB)")
+    ax.set_ylabel("Peak KV Memory (GiB)")
     ax.set_title(title)
     ax.legend()
     fig.tight_layout()
@@ -75,7 +75,7 @@ def plot_latency_comparison(
     results: Sequence[RunMetrics],
     out_path: str | Path,
     *,
-    title: str = "延迟对比 (TTFT / E2E)",
+    title: str = "Latency (TTFT / E2E)",
 ) -> str:
     """每个工作流 baseline vs optimized 的 TTFT 与 E2E 延迟分组柱状图。"""
     grouped = _group(results)
@@ -97,7 +97,7 @@ def plot_latency_comparison(
     ax1.set_ylabel("TTFT (ms)")
     ax1.set_title(title)
     ax1.legend()
-    ax2.set_ylabel("E2E 延迟 (s)")
+    ax2.set_ylabel("E2E Latency (s)")
     ax2.set_xticks(list(x))
     ax2.set_xticklabels(workloads, rotation=15, ha="right")
     ax2.legend()
@@ -113,7 +113,7 @@ def plot_ablation_curve(
     ablation: list[tuple[str, float | None, float | None, float | None]],
     out_path: str | Path,
     *,
-    title: str = "消融：逐步启用优化",
+    title: str = "Ablation: Cumulative Features",
 ) -> str:
     """消融实验折线图。
 
@@ -127,12 +127,12 @@ def plot_ablation_curve(
     x = range(len(names))
 
     fig, ax1 = plt.subplots(figsize=(max(7, 1.1 * len(names)), 4.6))
-    ax1.plot(list(x), mem, "o-", color="tab:blue", label="峰值 KV 显存 (GiB)")
-    ax1.set_ylabel("峰值 KV 显存 (GiB)", color="tab:blue")
+    ax1.plot(list(x), mem, "o-", color="tab:blue", label="Peak KV Memory (GiB)")
+    ax1.set_ylabel("Peak KV Memory (GiB)", color="tab:blue")
     ax1.tick_params(axis="y", labelcolor="tab:blue")
     ax2 = ax1.twinx()
-    ax2.plot(list(x), lat, "s--", color="tab:orange", label="E2E 延迟 (s)")
-    ax2.set_ylabel("E2E 延迟 (s)", color="tab:orange")
+    ax2.plot(list(x), lat, "s--", color="tab:orange", label="E2E Latency (s)")
+    ax2.set_ylabel("E2E Latency (s)", color="tab:orange")
     ax2.tick_params(axis="y", labelcolor="tab:orange")
     ax1.set_xticks(list(x))
     ax1.set_xticklabels(names, rotation=20, ha="right")
@@ -140,7 +140,7 @@ def plot_ablation_curve(
     succ_str = ", ".join(
         f"{n}: {('%.0f%%' % (s * 100)) if s is not None else '—'}" for n, s in zip(names, succ)
     )
-    fig.text(0.5, 0.01, f"任务成功率  {succ_str}", ha="center", fontsize=8)
+    fig.text(0.5, 0.01, f"Task Success Rate  {succ_str}", ha="center", fontsize=8)
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)

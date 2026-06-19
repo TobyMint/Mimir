@@ -1,9 +1,9 @@
 # ruff: noqa: E501
-"""Phase M：整合 A/B — 原生 vLLM baseline vs Mimir 全管线（patched v1）。
+"""Phase M：整合 A/B — native vLLM baseline vs Mimir 全管线（patched v1）。
 
 10 轮多轮 agent 对话：
-- baseline：原生 vLLM（scheduling_policy=fcfs，不压缩/不外置/不 finish_task），全量上下文进 KV
-- Mimir：patched v1 + scheduling_policy=mimir + 上下文压缩 + 工具外置 + 任务边界自动回收
+- baseline：native vLLM（scheduling_policy=fcfs，不Compress/不Offload/不 finish_task），全量上下文进 KV
+- Mimir：patched v1 + scheduling_policy=mimir + 上下文Compress + 工具Offload + Task边界自动Reclaim
 
 度量：每轮 new_prefill tokens、TTFT、累计 used_blocks。
 输出：benchmark_results/phase_m_ab_<model>.json + _curves.png
@@ -45,7 +45,7 @@ def run_ab(eng: VLLMEngineV1, *, compress: bool, label: str, max_tokens: int) ->
     rows = []
     for i, q in enumerate(QUESTIONS):
         history.append({"role": "user", "content": q})
-        # 压缩：构造一个临时 case 压缩旧轮（保留近 2 轮）
+        # Compress：构造一个临时 case Compress旧轮（保留近 2 轮）
         if compress and i >= 2:
             # 简化：把 history 中早于近2轮的 user 消息截短
             keep_from = len(history) - 4 if len(history) > 4 else 0
@@ -183,7 +183,7 @@ print("RESULT_JSON:"+json.dumps(rows))
     jp = out_dir / f"phase_m_ab_{Path(args.model).name}.json"
     jp.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 画曲线
+    # 画Curve
     try:
         import matplotlib
 

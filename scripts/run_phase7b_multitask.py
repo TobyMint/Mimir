@@ -1,10 +1,10 @@
-"""Phase 7b：多任务 KV 协调评测（新优化方向，赛题「多模型/多任务」40 分子项）。
+"""Phase 7b：多Task KV 协调评测（新Optimized方向，赛题「多模型/多Task」40 分子项）。
 
-在单卡上模拟 N 个并发 agent 任务，对比：
-- coordinated（Mimir MultiTaskCoordinator）：共享前缀 pin + 任务结束回收
-- uncoordinated（基线）：每任务各存前缀副本，无主动回收
+在单卡上模拟 N 个Concurrent agent Task，Comparison：
+- coordinated（Mimir MultiTaskCoordinator）：共享前缀 pin + Task结束Reclaim
+- uncoordinated（基线）：每Task各存前缀副本，无主动Reclaim
 
-度量：共享节省 %、回收 %、并发峰值。
+度量：共享saved %、Reclaim %、ConcurrentPeak。
 输出：benchmark_results/phase7b_multitask.json + _cmp.png
 
 用法（纯 CPU，不需 GPU）：
@@ -30,7 +30,7 @@ def main() -> int:
     ap.add_argument("--prefix", type=int, default=20)
     ap.add_argument("--own", type=int, default=50)
     ap.add_argument("--capacity", type=int, default=1000)
-    ap.add_argument("--sweep", action="store_true", help="扫描不同任务数")
+    ap.add_argument("--sweep", action="store_true", help="扫描不同Task数")
     ap.add_argument("--out-dir", default="benchmark_results")
     args = ap.parse_args()
 
@@ -38,7 +38,7 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if args.sweep:
-        # 扫描任务数 1..N，看协调收益随并发增长
+        # 扫描Task数 1..N，看协调收益随Concurrent增长
         rows = []
         for n in range(1, args.tasks + 1):
             r = simulate_multi_task(n, args.prefix, args.own, args.capacity)
@@ -59,7 +59,7 @@ def main() -> int:
         print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
         json_path = out_dir / "phase7b_multitask_sweep.json"
         json_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-        # 画扫描曲线
+        # 画扫描Curve
         try:
             import matplotlib
 
@@ -70,11 +70,11 @@ def main() -> int:
             share = [r["sharing_savings_pct"] for r in rows]
             reclaim = [r["reclaim_pct"] for r in rows]
             fig, ax = plt.subplots(figsize=(8, 4.5))
-            ax.plot(ns, share, "g^-", label="共享前缀节省 %")
-            ax.plot(ns, reclaim, "b.--", label="任务结束回收 %")
-            ax.set_xlabel("并发任务数")
-            ax.set_ylabel("相对朴素基线节省 %")
-            ax.set_title("Phase 7b：多任务 KV 协调收益随并发任务数增长")
+            ax.plot(ns, share, "g^-", label="共享前缀saved %")
+            ax.plot(ns, reclaim, "b.--", label="Task结束Reclaim %")
+            ax.set_xlabel("ConcurrentTask数")
+            ax.set_ylabel("相对Naive基线saved %")
+            ax.set_title("Phase 7b：多Task KV 协调收益随ConcurrentTask数增长")
             ax.legend(fontsize=9)
             fig.tight_layout()
             png = out_dir / "phase7b_multitask_sweep.png"

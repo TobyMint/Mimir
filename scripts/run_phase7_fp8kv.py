@@ -1,12 +1,12 @@
-"""Phase 7a：KV Cache fp8 量化（新优化方向）。
+"""Phase 7a：KV Cache fp8 Quant（新Optimized方向）。
 
-vLLM 支持 ``kv_cache_dtype=\"fp8\"``：把 KV cache 从 bf16(2B) 量化为 fp8(1B)，
-**显存占用减半** → 同样显存可容纳 2x 的上下文/并发。与 Mimir 其它优化正交。
+vLLM 支持 ``kv_cache_dtype=\"fp8\"``：把 KV cache 从 bf16(2B) Quant为 fp8(1B)，
+**Memory占用减半** → 同样Memory可容纳 2x 的上下文/Concurrent。与 Mimir 其它Optimized正交。
 
-对比：bf16 KV vs fp8 KV，度量：
-- KV cache 总块数（fp8 应 ~2x bf16，因同样显存放更多块）
-- 实际可用 KV 显存
-- 任务成功率（fp8 量化对效果的影响，核心：基本不下降）
+Comparison：bf16 KV vs fp8 KV，度量：
+- KV cache 总块数（fp8 应 ~2x bf16，因同样Memory放更多块）
+- 实际可用 KV Memory
+- TaskSuccess率（fp8 Quant对效果的影响，核心：基本不下降）
 - TTFT / new_prefill（口径一致）
 
 输出：benchmark_results/phase7_fp8kv_<model>.json + _cmp.png
@@ -99,7 +99,7 @@ def main() -> int:
         flush=True,
     )
 
-    # 汇总对比
+    # 汇总Comparison
     summary = {
         "model": tag,
         "bf16_kv_total_blocks": kv_bf,
@@ -140,7 +140,7 @@ def main() -> int:
     plot_latency_comparison(
         res_bf + res_fp,
         out_dir / f"phase7_fp8kv_{tag}_lat.png",
-        title="Phase 7a KV 量化：bf16 vs fp8 延迟",
+        title="Phase 7a KV Quant：bf16 vs fp8 Latency",
     )
     print(f"\n保存: {json_path}")
     print(f"保存: {out_dir / f'phase7_fp8kv_{tag}_summary.json'}")

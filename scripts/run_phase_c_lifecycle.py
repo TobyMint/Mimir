@@ -1,9 +1,9 @@
-"""Phase C GPU 验证：v1 in-tree 生命周期回收（mimir_finish_task）在真实引擎上端到端生效。
+"""Phase C GPU 验证：v1 in-tree 生命周期Reclaim（mimir_finish_task）在真实引擎上端到端生效。
 
-跑两个 agent 任务（各含若干 chat 轮），每个任务结束后调 mimir_finish_task。
-对比：
-- baseline（无 finish_task）：任务结束后 KV 仍驻留（vLLM LRU 被动保留）
-- mimir（调 finish_task）：任务结束立即回收，mimir_lifecycle_reclaims 增长，空闲块增多
+跑两个 agent Task（各含若干 chat 轮），每个Task结束后调 mimir_finish_task。
+Comparison：
+- baseline（无 finish_task）：Task结束后 KV 仍驻留（vLLM LRU 被动保留）
+- mimir（调 finish_task）：Task结束立即Reclaim，mimir_lifecycle_reclaims 增长，空闲块增多
 
 度量：mimir_lifecycle_reclaims、free_blocks、peak used_blocks。
 输出：benchmark_results/phase_c_lifecycle_<model>.json
@@ -28,7 +28,7 @@ from mimir.gpu import as_env, pick_least_busy_gpu
 
 
 def run_task(eng: VLLMEngineV1, task_id: str, questions: list[str], max_tokens: int) -> int:
-    """跑一个 agent 任务（多轮 chat），返回该任务累计输出 token。"""
+    """跑一个 agent Task（多轮 chat），返回该Task累计输出 token。"""
     eng.set_current_task(task_id)
     out_tokens = 0
     msgs = [{"role": "system", "content": f"You are agent {task_id}. Answer briefly."}]
@@ -73,20 +73,20 @@ def main() -> int:
     ]
     tasks = [("task_A", QUESTIONS), ("task_B", ["Explain recursion.", "What is an LLM?"])]
 
-    # 单引擎 A/B：跑任务，记录「无 finish_task」的驻留块数；再手动 finish 各任务，
-    # 对比 mimir_lifecycle_reclaims 增长。避免双引擎叠加显存 OOM。
-    print("\n=== 跑两个任务（不调 finish_task）===", flush=True)
+    # 单引擎 A/B：跑Task，记录「无 finish_task」的驻留块数；再手动 finish 各Task，
+    # Comparison mimir_lifecycle_reclaims 增长。避免双引擎叠加Memory OOM。
+    print("\n=== 跑两个Task（不调 finish_task）===", flush=True)
     for tid, qs in tasks:
         run_task(eng, tid, qs, args.max_tokens)
     pre = eng.mimir_stats()
     print(
-        f"任务完成后（未回收）: used_blocks={pre.get('used_blocks')} "
+        f"Task完成后（未Reclaim）: used_blocks={pre.get('used_blocks')} "
         f"total={pre.get('total_blocks')} reclaims={pre.get('mimir_lifecycle_reclaims')}",
         flush=True,
     )
 
-    # 现在 Mimir 主动回收每个任务
-    print("\n=== Mimir 主动回收（mimir_finish_task）===", flush=True)
+    # 现在 Mimir 主动Reclaim每个Task
+    print("\n=== Mimir 主动Reclaim（mimir_finish_task）===", flush=True)
     reclaims_total = 0
     snapshots = []
     for tid, _qs in tasks:

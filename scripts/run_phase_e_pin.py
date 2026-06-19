@@ -4,11 +4,11 @@ Mimir pin 语义（区别于 Continuum）：
 - 触发：agent 轮边界（Mimir 知道何时暂停），非 Continuum 的「解析工具调用文本 + 估时」
 - 边界：lifecycle-bounded（pin 到同 agent 下一轮开始，无时间猜测），非 time-bounded
 - 粒度：per-block（仅 system+history 前缀；中间 scratch 仍可淘汰），非 whole-request
-- 组合：pin 与 Phase C lifecycle evictor 协同（PINNED 块 finish_task 不回收）
+- 组合：pin 与 Phase C lifecycle evictor 协同（PINNED 块 finish_task 不Reclaim）
 
-验证：agent A 跑完 pin 其前缀块；agent B 跑（占显存）；再调 A 的下一轮，
-确认 A 的 pinned 前缀块未被回收（mimir_block_lifecycle 中仍 pinned / 前缀块仍在）。
-对比「不 pin」时 A 前缀可能被压力淘汰（下轮需重算）。
+验证：agent A 跑完 pin 其前缀块；agent B 跑（占Memory）；再调 A 的下一轮，
+确认 A 的 pinned 前缀块未被Reclaim（mimir_block_lifecycle 中仍 pinned / 前缀块仍在）。
+Comparison「不 pin」时 A 前缀可能被压力淘汰（下轮需重算）。
 
 输出：benchmark_results/phase_e_pin_<model>.json
 
@@ -82,7 +82,7 @@ def main() -> int:
     pinned_count = sum(1 for v in lc.values() if v == "pinned")
     print(f"Mimir pinned {pinned} of agent_A's blocks (pinned_count={pinned_count})", flush=True)
 
-    # agent B 跑（不同前缀，占显存）
+    # agent B 跑（不同前缀，占Memory）
     eng.set_current_task("agent_B")
     eng.chat(
         [

@@ -1,11 +1,11 @@
 # ruff: noqa: E501
-"""Phase O：并发多 agent A/B（赛题「多任务推理」场景，引擎级验证）。
+"""Phase O：Concurrent多 agent A/B（赛题「多Task推理」场景，引擎级验证）。
 
-3 个 agent 任务交替跑（A,B,C,A,B,C,...），单卡并发：
-- native：fcfs，不区分任务，所有 KV 累积
-- Mimir：mimir 策略，每任务独立 task_id，请求完成自动回收（Phase L）
+3 个 agent Task交替跑（A,B,C,A,B,C,...），单卡Concurrent：
+- native：fcfs，不区分Task，所有 KV 累积
+- Mimir：mimir 策略，每Task独立 task_id，请求完成自动Reclaim（Phase L）
 
-度量：峰值 used_blocks、累计 lifecycle_reclaims、是否稳态（Mimir 应保持平稳，native 累积）。
+度量：Peak used_blocks、累计 lifecycle_reclaims、是否稳态（Mimir 应保持平稳，native 累积）。
 输出：benchmark_results/phase_o_concurrent_<model>.json + _curves.png
 
 用法：python scripts/run_phase_o_concurrent.py
@@ -43,7 +43,7 @@ order = ["A","B","C","A","B","C"]
 rows = []
 for i, key in enumerate(order):
     sys_msg, q = AGENTS[key]
-    tid = f"agent_{key}_{i}"  # 每轮唯一任务 id（mimir 模式触发自动回收）
+    tid = f"agent_{key}_{i}"  # 每轮唯一Task id（mimir 模式触发自动Reclaim）
     ctx = q + (" Consider KV cache memory implications. " * 4)
     eng.set_current_task(tid)
     eng.chat([{"role":"system","content":sys_msg},{"role":"user","content":ctx}], max_tokens=mtok)
