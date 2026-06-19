@@ -80,6 +80,29 @@ class _FakeBlockPool:
     def mimir_get_task_block_ids(self, task_id):
         return [bid for bid, tid in self.mimir_block_task.items() if tid == task_id]
 
+    def mimir_reclaim_evictable(self):
+        reclaimed = 0
+        evictable_ids = [bid for bid, lc in self.mimir_block_lifecycle.items() if lc == "evictable"]
+        for bid in evictable_ids:
+            block = self.blocks[bid]
+            if block.ref_cnt != 0:
+                continue
+            bh = block.block_hash
+            if bh is not None:
+                block.reset_hash()
+                by_id = self.cached_block_hash_to_block.get(bh)
+                if by_id is not None:
+                    by_id.pop(bid, None)
+                    if not by_id:
+                        del self.cached_block_hash_to_block[bh]
+            self._free.append(block)
+            self.mimir_block_task.pop(bid, None)
+            self.mimir_block_lifecycle.pop(bid, None)
+            self.mimir_used_blocks = max(0, self.mimir_used_blocks - 1)
+            reclaimed += 1
+        self.mimir_lifecycle_reclaims += reclaimed
+        return reclaimed
+
 
 def _occupy(bp, task_id, block_ids, ref_cnts=None, hashes=None):
     """模拟 cache_full_blocks 标记一段块归 task_id（可设 ref_cnt / hash）。"""
@@ -150,3 +173,27 @@ def test_get_task_block_ids() -> None:
     _occupy(bp, "t2", [3])
     assert set(bp.mimir_get_task_block_ids("t1")) == {1, 2}
     assert bp.mimir_get_task_block_ids("t2") == [3]
+
+
+def test_reclaim_evictable_sweeps_marked_blocks() -> None:
+    """Phase J：mimir_reclaim_evictable 主动回收所有 EVICTABLE 块。"""
+    bp = _FakeBlockPool(num_blocks=10)
+    _occupy(bp, "t1", [1, 2], ref_cnts=[1, 0], hashes=[b"h1", b"h2"])  # 块1 被引用, 块2 空闲
+    # finish_task 把块1（被引用）标记 evictable，块2 直接回收
+    bp.mimir_finish_task("t1")
+    assert bp.mimir_block_lifecycle.get(1) == "evictable"
+    # 模拟块1 引用释放（ref_cnt -> 0）后调 reclaim_evictable
+    bp.blocks[1].ref_cnt = 0
+    n = bp.mimir_reclaim_evictable()
+    assert n == 1  # 回收块1
+    assert bp.mimir_block_task == {}
+    assert bp.mimir_lifecycle_reclaims >= 1
+
+
+def test_reclaim_evictable_skips_still_referenced() -> None:
+    bp = _FakeBlockPool(num_blocks=10)
+    _occupy(bp, "t1", [1, 2], ref_cnts=[1, 1], hashes=[b"h1", b"h2"])
+    bp.mimir_finish_task("t1")  # 两块都 evictable（被引用未回收）
+    n = bp.mimir_reclaim_evictable()
+    assert n == 0  # 都仍被引用，跳过
+    assert len(bp.mimir_block_task) == 2
