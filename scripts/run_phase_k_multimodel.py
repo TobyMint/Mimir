@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Phase K：多模型规模泛化验证（直击「适配不同模型规模」20 分）。
 
 在 Qwen3-1.7B / Qwen3-4B-Instruct-2507 / Qwen3-8B 上跑相同的 Mimir 生命周期+CoW 验证，
@@ -20,9 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mimir.engine_vllm import EngineConfig
-from mimir.engine_vllm_v1 import VLLMEngineV1
-from mimir.gpu import as_env, pick_least_busy_gpu
+from mimir.gpu import pick_least_busy_gpu
 
 MODELS = [
     ("Qwen3-1.7B", "/data/models/Qwen3-1.7B"),
@@ -32,76 +31,65 @@ MODELS = [
 SYS = "You are a helpful agent. Answer briefly about KV cache."
 
 
+CHILD_SCRIPT = r"""
+import os, json, sys
+sys.path.insert(0, os.getcwd())
+from mimir.engine_vllm import EngineConfig
+from mimir.engine_vllm_v1 import VLLMEngineV1
+name, path, gpu, max_tokens = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
+os.environ["CUDA_VISIBLE_DEVICES"] = gpu
+cfg = EngineConfig(model=path, dtype="bfloat16", gpu_memory_utilization=0.45,
+                   enable_prefix_caching=True, max_model_len=2048)
+eng = VLLMEngineV1(cfg, device=0); _ = eng.llm
+SYS = "You are a helpful agent. Answer briefly about KV cache."
+# lifecycle
+eng.set_current_task("t1")
+eng.chat([{"role":"system","content":SYS},{"role":"user","content":"What is prefix caching?"}], max_tokens=max_tokens)
+eng.set_current_task("t2")
+eng.chat([{"role":"system","content":SYS},{"role":"user","content":"What is KV reuse?"}], max_tokens=max_tokens)
+pre = eng.mimir_stats()
+r1 = eng.mimir_finish_task("t1"); r2 = eng.mimir_finish_task("t2")
+post = eng.mimir_stats()
+# CoW (same engine: branch B reuses A prefix)
+eng.set_current_task("brA")
+eng.chat([{"role":"system","content":SYS},{"role":"user","content":"Estimate KV for 7B 32k. Approach A: decompose."}], max_tokens=max_tokens)
+eng.set_current_task("brB")
+eng.chat([{"role":"system","content":SYS},{"role":"user","content":"Estimate KV for 7B 32k. Approach B: analogy."}], max_tokens=max_tokens)
+cow = eng.mimir_stats().get("mimir_cow_reuses", 0)
+print("RESULT_JSON:" + json.dumps({
+    "model": name, "total_blocks": pre.get("total_blocks"),
+    "lifecycle_used_before": pre.get("used_blocks"),
+    "lifecycle_used_after": post.get("used_blocks"),
+    "lifecycle_reclaims": r1 + r2, "cow_reuses": cow,
+    "patch_works": (r1 + r2) > 0 or cow > 0,
+}))
+"""
+
+
 def verify_model(name: str, path: str, g, max_tokens: int) -> dict:
-    """在一个模型上跑 lifecycle + CoW 验证，返回结果。"""
-    os.environ.update(as_env(g))
+    """在子进程中跑（完全释放显存），避免多模型叠加 OOM。"""
+    import subprocess
+
     print(f"\n=== {name} ===", flush=True)
-    cfg = EngineConfig(
-        model=path,
-        dtype="bfloat16",
-        gpu_memory_utilization=0.50,
-        enable_prefix_caching=True,
-        max_model_len=2048,
+    env = dict(os.environ)
+    r = subprocess.run(
+        ["python", "-c", CHILD_SCRIPT, name, path, str(g.index), str(max_tokens)],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=300,
     )
-    eng = VLLMEngineV1(cfg, device=0)
-    _ = eng.llm
-    print(f"  engine_init={eng.engine_init_seconds:.1f}s", flush=True)
-
-    # 生命周期验证：2 任务，finish_task 回收
-    eng.set_current_task("t1")
-    eng.chat(
-        [
-            {"role": "system", "content": SYS},
-            {"role": "user", "content": "What is prefix caching?"},
-        ],
-        max_tokens=max_tokens,
-    )
-    eng.set_current_task("t2")
-    eng.chat(
-        [{"role": "system", "content": SYS}, {"role": "user", "content": "What is KV reuse?"}],
-        max_tokens=max_tokens,
-    )
-    pre = eng.mimir_stats()
-    r1 = eng.mimir_finish_task("t1")
-    r2 = eng.mimir_finish_task("t2")
-    post = eng.mimir_stats()
-    print(
-        f"  lifecycle: used {pre.get('used_blocks')} -> {post.get('used_blocks')}, reclaims={r1 + r2}",
-        flush=True,
-    )
-
-    # CoW 验证：新引擎，2 分支共享前缀
-    eng2 = VLLMEngineV1(cfg, device=0)
-    _ = eng2.llm
-    question = "Estimate KV memory for 7B at 32k in fp16."
-    eng2.set_current_task("brA")
-    eng2.chat(
-        [
-            {"role": "system", "content": SYS},
-            {"role": "user", "content": f"{question} Approach A: decompose."},
-        ],
-        max_tokens=max_tokens,
-    )
-    eng2.set_current_task("brB")
-    eng2.chat(
-        [
-            {"role": "system", "content": SYS},
-            {"role": "user", "content": f"{question} Approach B: analogy."},
-        ],
-        max_tokens=max_tokens,
-    )
-    cow = eng2.mimir_stats().get("mimir_cow_reuses", 0)
-    print(f"  CoW: cow_reuses={cow}", flush=True)
-
-    return {
-        "model": name,
-        "total_blocks": pre.get("total_blocks"),
-        "lifecycle_used_before": pre.get("used_blocks"),
-        "lifecycle_used_after": post.get("used_blocks"),
-        "lifecycle_reclaims": r1 + r2,
-        "cow_reuses": cow,
-        "patch_works": (r1 + r2) > 0 or cow > 0,
-    }
+    for line in r.stdout.splitlines():
+        if line.startswith("RESULT_JSON:"):
+            res = json.loads(line[len("RESULT_JSON:") :])
+            print(
+                f"  lifecycle: used {res['lifecycle_used_before']} -> {res['lifecycle_used_after']}, "
+                f"reclaims={res['lifecycle_reclaims']}, CoW={res['cow_reuses']}",
+                flush=True,
+            )
+            return res
+    print(f"  ERROR (no result): {r.stderr[-300:]}", flush=True)
+    return {"model": name, "status": "error", "error": r.stderr[-200:]}
 
 
 def main() -> int:
