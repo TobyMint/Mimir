@@ -26,6 +26,7 @@ source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=
 | G | `vllm/config/scheduler.py` | `SchedulerPolicy` Literal += `"mimir"` | — |
 | G | `vllm/v1/core/sched/request_queue.py` | `SchedulingPolicy.MIMIR` + `MimirRequestQueue`（FCFS 子类） | — |
 | G | `vllm/v1/core/sched/scheduler.py` | 调度策略分发 `"mimir"` → `SchedulingPolicy.MIMIR` + 日志 | 引擎日志 "Mimir scheduling policy active" |
+| I | `vllm/v1/core/block_pool.py` | `mimir_pin_hits` 计数器（pin 阻止回收时增） | pin 阻止回收可观测 |
 | J | `vllm/v1/core/block_pool.py` | `mimir_reclaim_evictable()` 主动扫描回收所有 EVICTABLE 块（闭环：finish_task 标记 + reclaim 扫描） | 验证：finish_task 回收 3 块 used 3→0 |
 | L | `vllm/v1/core/sched/scheduler.py` | mimir 策略下 `_free_blocks` 自动调 `mimir_finish_task`（任务完成即回收，自驱动） | auto_reclaim_works=True（reclaims=2，无需外部调用） |
 
@@ -63,5 +64,7 @@ Continuum（`vllm-continuum`/`vllm-diff`，同为 v0.10.2 fork）做的是 **工
 | `scripts/run_phase7_fp8kv.py`（改用 v1）| fp8 回退 |
 | `scripts/run_phase_j_reclaim_evictable.py` | reclaim_evictable 闭环 |
 | `scripts/run_phase_k_multimodel.py` | 多模型规模泛化（1.7B/4B）|
+| `scripts/run_phase_m_ab.py` | 决定性 A/B（单 agent 10 轮 used 69→0） |
+| `scripts/run_phase_o_concurrent.py` | 并发多 agent A/B（3 agent used 14→0）|
 
 结果落盘：`benchmark_results/phase_{c,d,e,f,g}_*.json`。
