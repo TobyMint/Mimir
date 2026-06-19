@@ -1,0 +1,28 @@
+{
+  "model": "Qwen3-4B-Instruct-2507",
+  "prefill_prompt_tokens": 3768,
+  "prefill_cached_tokens": 0,
+  "block_class_counts_before_evict": {
+    "system": 20,
+    "reasoning": 114,
+    "tool_result": 99,
+    "user": 2,
+    "unknown": 1
+  },
+  "evict_request": 57,
+  "evicted": 57,
+  "block_class_counts_after_evict": {
+    "system": 20,
+    "reasoning": 57,
+    "tool_result": 99,
+    "user": 2,
+    "unknown": 1
+  },
+  "class_evicts": {
+    "reasoning": 57,
+    "user": 0,
+    "tool_result": 0,
+    "system": 0,
+    "unknown": 0
+  }
+}

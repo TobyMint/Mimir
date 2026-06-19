@@ -82,6 +82,19 @@ class BlockPool:
         self.mimir_used_blocks: int = 0                    # 由 cache_full_blocks 增、mimir_finish_task 减
         self.mimir_cow_reuses: int = 0                     # 跨分支 CoW 复用计数（Phase D）
         self.mimir_pin_hits: int = 0                       # pin 生效计数（Phase E，pin 阻止淘汰时增）
+        # ---- Mimir innovation patch: 块语义类别（block-class）感知管理 ----------- #
+        # 给每个被 cache 的 KV 块打语义类别标签（block_id -> class），由 Mimir adapter 根据
+        # prompt 里消息角色边界（system / user / assistant reasoning / tool_result）推断并经
+        # Request.mimir_block_classes 传入。淘汰时按类别优先级排序——这是 Mimir 的差异化创新：
+        # 通用 LRU/H2O 只看访问热度或 attention 权重，不区分「这是工具返回（高价值，应保留到
+        # 任务结束再摘要外置）」vs「这是推理中间态（低价值，优先淘汰）」。类别→淘汰优先级：
+        #   reasoning > user > tool_result > system  （reasoning 最先淘汰，system 最后）
+        self.mimir_block_class: dict[int, str] = {}        # block_id -> {system,user,reasoning,tool_result,...}
+        self.mimir_class_evicts: dict[str, int] = {        # 按类别累计淘汰数（导出到 stats，证明类别感知生效）
+            "reasoning": 0, "user": 0, "tool_result": 0, "system": 0, "unknown": 0,
+        }
+        # ---- Mimir innovation patch end --------------------------------------- #
+
         # ---- Mimir patch end ----------------------------------------------- #
 
     def get_cached_block(
@@ -163,7 +176,18 @@ class BlockPool:
                 request, "mimir_task_id", None)
             if blk.block_id not in self.mimir_block_lifecycle:
                 self.mimir_block_lifecycle[blk.block_id] = "active"
-            # ---- Mimir patch end ----
+            # ---- Mimir innovation (block-class): 给块打语义类别标签 ----
+            # 该块在请求块序列中的绝对索引 = num_cached_blocks（前缀复用部分）+ i。
+            # Mimir adapter 预算好 request.mimir_block_classes（per-block-index 类别）。
+            if blk.block_id not in self.mimir_block_class:
+                cls = "unknown"
+                classes = getattr(request, "mimir_block_classes", None)
+                if classes is not None:
+                    blk_idx = num_cached_blocks + i
+                    if 0 <= blk_idx < len(classes):
+                        cls = classes[blk_idx] or "unknown"
+                self.mimir_block_class[blk.block_id] = cls
+            # ---- Mimir innovation end ------------------------------------------
 
         if self.enable_kv_cache_events:
             if num_cached_blocks == 0:
@@ -207,6 +231,15 @@ class BlockPool:
         except Exception:
             pass
         # ---- Mimir patch end ----
+        # ---- Mimir innovation (block-class): 容量紧张时按类别优先淘汰 ----
+        # 若空闲块不足以满足本次分配，按「reasoning > user > tool_result > system」优先级
+        # 主动淘汰低价值类别的缓存块（而非 LRU 盲选）。这是 block-class 感知淘汰接入分配路径。
+        if num_blocks > self.get_num_free_blocks():
+            try:
+                self.mimir_class_aware_evict(num_blocks - self.get_num_free_blocks())
+            except Exception:
+                pass
+        # ---- Mimir innovation end ----
 
         if num_blocks > self.get_num_free_blocks():
             raise ValueError(
@@ -311,6 +344,7 @@ class BlockPool:
                 self.free_block_queue.append(block)
             self.mimir_block_task.pop(bid, None)
             self.mimir_block_lifecycle.pop(bid, None)
+            self.mimir_block_class.pop(bid, None)  # innovation: 清类别标签
             self.mimir_used_blocks = max(0, self.mimir_used_blocks - 1)
             reclaimed += 1
         self.mimir_lifecycle_reclaims += reclaimed
@@ -370,11 +404,75 @@ class BlockPool:
                 self.free_block_queue.append(block)
             self.mimir_block_task.pop(bid, None)
             self.mimir_block_lifecycle.pop(bid, None)
+            self.mimir_block_class.pop(bid, None)  # innovation: 清类别标签
             self.mimir_used_blocks = max(0, self.mimir_used_blocks - 1)
             reclaimed += 1
         self.mimir_lifecycle_reclaims += reclaimed
         return reclaimed
     # ---- Mimir patch end ---------------------------------------------------- #
+
+    # ---- Mimir innovation (block-class): 类别感知主动淘汰 -------------------- #
+    _MIMIR_CLASS_EVICT_PRIORITY = ("reasoning", "user", "tool_result", "system")
+
+    def mimir_class_aware_evict(self, need: int) -> int:
+        """按块语义类别优先级主动淘汰缓存块，腾出 ``need`` 个空闲块。
+
+        优先淘汰 reasoning 块（推理中间态，低价值），再 user，再 tool_result（高价值，
+        应保留到任务结束），最后 system（共享前缀，最忌淘汰）。跳过 ref_cnt!=0 的在用块。
+        对比 vLLM 原生 LRU（只看访问序、不分类别）：本方法证明「按语义价值而非热度淘汰」
+        能在 Agent 长上下文累积下把更宝贵的显存留给工具返回/系统前缀。
+        """
+        if need <= 0:
+            return 0
+        evicted = 0
+        for cls in self._MIMIR_CLASS_EVICT_PRIORITY + ("unknown",):
+            if evicted >= need:
+                break
+            # 收集该类别、仍在 cache（有 hash）、无引用的块 id
+            candidates = [
+                bid for bid, c in self.mimir_block_class.items()
+                if c == cls
+                and self.mimir_block_lifecycle.get(bid) != "pinned"
+                and self.blocks[bid].ref_cnt == 0
+                and self.blocks[bid].block_hash is not None
+            ]
+            for bid in candidates:
+                if evicted >= need:
+                    break
+                block = self.blocks[bid]
+                bh = block.block_hash
+                if bh is None:
+                    continue
+                block.reset_hash()
+                by_id = self.cached_block_hash_to_block.get(bh)
+                if by_id is not None:
+                    by_id.pop(bid, None)
+                    if len(by_id) == 0:
+                        del self.cached_block_hash_to_block[bh]
+                if self.enable_kv_cache_events:
+                    self.kv_event_queue.append(
+                        BlockRemoved(block_hashes=[
+                            maybe_convert_block_hash(get_block_hash(bh))],
+                            medium=MEDIUM_GPU))
+                # 不动 free_block_queue：该块仍在 free 队列里（ref_cnt==0），淘汰其 cache 即可
+                self.mimir_block_class.pop(bid, None)
+                self.mimir_block_task.pop(bid, None)
+                self.mimir_block_lifecycle.pop(bid, None)
+                self.mimir_used_blocks = max(0, self.mimir_used_blocks - 1)
+                self.mimir_class_evicts[cls] = self.mimir_class_evicts.get(cls, 0) + 1
+                evicted += 1
+        return evicted
+
+    def mimir_class_stats(self) -> dict:
+        """导出按类别的块数 + 按类别的淘汰数（供测试报告证明 block-class 感知生效）。"""
+        counts: dict[str, int] = {}
+        for c in self.mimir_block_class.values():
+            counts[c] = counts.get(c, 0) + 1
+        return {
+            "block_class_counts": counts,
+            "class_evicts": dict(self.mimir_class_evicts),
+        }
+    # ---- Mimir innovation end ---------------------------------------------- #
 
     def touch(self, blocks: tuple[list[KVCacheBlock], ...]) -> None:
         """Touch a block increases its reference count by 1, and may remove

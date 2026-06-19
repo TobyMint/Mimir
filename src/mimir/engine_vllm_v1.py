@@ -152,6 +152,81 @@ class VLLMEngineV1(VLLMEngine):
         self.set_current_task(task_id)
         return self.chat(messages, max_tokens=max_tokens, temperature=temperature)
 
+    def _block_size(self) -> int:
+        try:
+            return int(self._llm.llm_engine.vllm_config.cache_config.block_size)
+        except Exception:
+            return 16
+
+    def _compute_block_classes(self, messages: list[dict[str, str]]) -> list[str]:
+        """按消息角色把 prompt 的每个块打语义类别标签（block-class 创新的核心注入）。
+
+        用 tokenizer 把每条消息编码，按累积 token 数对齐到块边界（block_size），给落在
+        该消息区间内的块打类别：
+          - role=system                 -> "system"
+          - role=assistant              -> "reasoning"  （模型推理中间态，低价值优先淘汰）
+          - 以 "[TOOL_RESULT" 开头的 user -> "tool_result"（高价值，保留到任务结束）
+          - 其余 user                    -> "user"
+        返回 per-block-index 的类别列表。失败时返回空列表（block_pool 退回 "unknown"）。
+        """
+        try:
+            tok = self._llm.get_tokenizer()  # vLLM LLM 提供
+        except Exception:
+            return []
+        block_size = max(1, self._block_size())
+
+        def role_class(role: str, content: str) -> str:
+            if role == "system":
+                return "system"
+            if role == "assistant":
+                return "reasoning"
+            if role == "user" and content.lstrip().startswith("[TOOL_RESULT"):
+                return "tool_result"
+            return "user"
+
+        # 用 chat 模板里每条消息的 token 长度近似对齐（不考虑模板拼接的少量特殊 token，
+        # 误差 ≤ 1 块，对「类别感知」足够）。
+        classes: list[str] = []
+        cum = 0
+        for m in messages:
+            role = m.get("role", "user")
+            content = m.get("content", "") or ""
+            try:
+                n = len(tok.encode(content))
+            except Exception:
+                n = max(1, len(content) // 3)
+            start_block = cum // block_size
+            end_block = (cum + n + block_size - 1) // block_size  # ceil
+            for bi in range(start_block, max(start_block + 1, end_block)):
+                # 该块若已被前一条消息占满会重复——用首条覆盖它的消息定类
+                while len(classes) <= bi:
+                    classes.append(role_class(role, content))
+                classes[bi] = role_class(role, content)
+            cum += n
+        return classes
+
+    def chat_full(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        max_tokens: int = 256,
+        temperature: float = 0.0,
+    ) -> Any:
+        """单轮 chat，返回完整 ``RequestOutput``。注入 block-class 标签（创新核心）。"""
+        # 计算 per-block 类别并经 engine_core 挂到 Request（core.py Phase-C 站点旁路读取）
+        try:
+            classes = self._compute_block_classes(messages)
+            ec = self._engine_core()
+            if ec is not None and classes:
+                ec._mimir_block_classes = classes  # noqa: SLF001
+            elif ec is not None:
+                ec._mimir_block_classes = []  # noqa: SLF001
+        except Exception:
+            pass
+        sp = self._make_sp(max_tokens, temperature)
+        outs = self.llm.chat([messages], sp, use_tqdm=False)
+        return outs[0]
+
     def mimir_finish_task(self, task_id: str) -> int:
         """任务结束：调 block_pool.mimir_finish_task 主动回收该任务 KV。返回回收块数。"""
         bp = self.mimir_block_pool()

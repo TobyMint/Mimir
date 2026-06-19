@@ -1246,6 +1246,10 @@ class Scheduler(SchedulerInterface):
                 bp, "mimir_lifecycle_reclaims", 0)
             stats["mimir_cow_reuses"] = getattr(bp, "mimir_cow_reuses", 0)
             stats["mimir_pin_hits"] = getattr(bp, "mimir_pin_hits", 0)
+            # innovation: block-class 感知管理统计（类别块数 + 按类别淘汰数）
+            cs_fn = getattr(bp, "mimir_class_stats", None)
+            if callable(cs_fn):
+                stats["mimir_block_class"] = cs_fn()
             return stats
         except Exception:
             return {}

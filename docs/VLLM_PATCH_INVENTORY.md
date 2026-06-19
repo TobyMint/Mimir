@@ -31,6 +31,10 @@ source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=
 | L | `vllm/v1/core/sched/scheduler.py` | mimir 策略下 `_free_blocks` 自动调 `mimir_finish_task`（任务完成即回收，自驱动） | auto_reclaim_works=True（reclaims=2，无需外部调用） |
 | R | `vllm/v1/engine/output_processor.py` | `_new_request_output` 用 v1 `RequestState.stats`（arrival/first_token/scheduled/last_token）构造 `RequestMetrics` 挂到 `RequestOutput.metrics`（v1 原本恒为 None，无法观测 TTFT） | v1 每请求 TTFT/prefill/e2e 可读；agent-loop 每步 ttft 真实落盘 |
 | R | `src/mimir/engine_vllm_v1.py` | 构造时 `disable_log_stats=False`（v1 `LLM()` 默认强制 `True`，会关闭整个 stat pipeline，使 `RequestState.stats=None`） | 配合上面 patch，stats pipeline 保活 → TTFT 可观测 |
+| **BC** | `vllm/v1/core/block_pool.py` | **【创新核心】** 新增 `mimir_block_class`（block_id→语义类别）+ `mimir_class_aware_evict()`（按 `reasoning>user>tool_result>system` 优先级主动淘汰，对比 vLLM 原生 LRU 盲选）；`cache_full_blocks` 给每个缓存块打类别标签；`get_new_blocks` 容量紧张时先 `mimir_class_aware_evict` | 演示：20 system/114 reasoning/99 tool_result 块，evict(57) 只淘汰 reasoning 57、tool_result/system 0 存活；5 个确定性单测覆盖优先级与 pin |
+| **BC** | `vllm/v1/engine/core.py` | 注入 `req.mimir_block_classes`（从 `engine_core._mimir_block_classes`） | adapter 计算的 per-block 类别流入 block_pool |
+| **BC** | `src/mimir/engine_vllm_v1.py` | 新增 `chat_full()` 重写 + `_compute_block_classes()`：按消息角色（system/assistant→reasoning/`[TOOL_RESULT`→tool_result/user）把 prompt 块对齐打类别 | 真实 Qwen3-4B 上标签注入成功（block_class_counts 可读） |
+| **BC** | `vllm/v1/core/sched/scheduler.py` | `get_mimir_stats()` 附加 `mimir_class_stats()`（类别块数 + 按类别淘汰数） | 类别感知淘汰可观测、可报告 |
 
 ## 与同实验室 Continuum 的区别
 
@@ -68,5 +72,10 @@ Continuum（`vllm-continuum`/`vllm-diff`，同为 v0.10.2 fork）做的是 **工
 | `scripts/run_phase_k_multimodel.py` | 多模型规模泛化（1.7B/4B）|
 | `scripts/run_phase_m_ab.py` | 决定性 A/B（单 agent 10 轮 used 69→0） |
 | `scripts/run_phase_o_concurrent.py` | 并发多 agent A/B（3 agent used 14→0）|
+| `scripts/run_phase_blockclass.py` | **【创新】block-class 标签注入 + 类别感知淘汰**（evict 只淘汰 reasoning） |
+| `tests/test_block_class.py` | block-class 确定性单测（优先级序 + pin 跳过，5 例）|
+| `scripts/gen_deepseek_traces.py` | DeepSeek V4 Pro 产真实 agent 轨迹 |
+| `scripts/run_trace_benchmark.py` | DeepSeek 轨迹 A/B（native 崩 vs Mimir used=0）|
+| `scripts/run_llm_judge.py` | DeepSeek-judge 保真 A/B（压缩无损正确性）|
 
 结果落盘：`benchmark_results/phase_{c,d,e,f,g}_*.json`。

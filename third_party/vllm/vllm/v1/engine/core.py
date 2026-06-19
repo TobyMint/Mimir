@@ -451,7 +451,11 @@ class EngineCore:
         # 由 Mimir adapter 通过 engine_core._mimir_current_task 设置当前任务 id；
         # block_pool.cache_full_blocks 据此记录块→任务归属，mimir_finish_task 据此回收。
         req.mimir_task_id = getattr(self, "_mimir_current_task", None)
-        # ---- Mimir patch end ----
+        # ---- Mimir innovation (block-class): 挂载 per-block 语义类别标签 ----
+        # adapter 经 _mimir_block_classes 传入；block_pool.cache_full_blocks 据此给每个
+        # 缓存块打 class 标签，mimir_class_aware_evict 据此按类别优先淘汰。
+        req.mimir_block_classes = getattr(self, "_mimir_block_classes", []) or []
+        # ---- Mimir innovation end ----
         if req.use_structured_output:
             # Note on thread safety: no race condition.
             # `grammar_init` is only invoked in input processing thread. For
