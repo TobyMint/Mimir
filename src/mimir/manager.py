@@ -191,5 +191,50 @@ class MemoryManager:
             return self._evictor.finish_task(task_id)
         return 0
 
+    def run_turn_with_engine(
+        self,
+        eng: Any,
+        case: WorkloadCase,
+        *,
+        task_id: str,
+        max_tokens: int = 128,
+    ) -> dict[str, Any]:
+        """统一一条 agent 轮：外部管线变换 + vLLM(in-tree patched) 引擎执行。
+
+        串起两层优化：先用 ``apply()`` 做请求侧变换（压缩/外置/prefix），
+        再设引擎当前任务并执行（mimir 策略下请求完成会自动回收 KV）。
+        返回该轮的指标（含外部管线 step + 引擎 mimir_stats）。
+        """
+        # 1. 外部变换
+        pr = self.apply(case, task_id=task_id)
+        # 2. 引擎执行（若 eng 是 VLLMEngineV1，设当前任务）
+        set_task = getattr(eng, "set_current_task", None)
+        if callable(set_task):
+            set_task(task_id)
+        chat = getattr(eng, "chat", None)
+        text, n_tok = "", 0
+        if callable(chat):
+            # 用变换后 case 构造多轮最后一条请求
+            from benchmarks.harness import build_requests
+
+            reqs = build_requests(pr.case, max_tokens=max_tokens, offload_store=self._offload)
+            last = reqs[-1] if reqs else None
+            if last is not None:
+                text, n_tok = chat(last.messages, max_tokens=last.max_tokens)
+        # 3. 引擎指标
+        stats = {}
+        get_stats = getattr(eng, "mimir_stats", None)
+        if callable(get_stats):
+            stats = get_stats()
+        return {
+            "task_id": task_id,
+            "text": text[:80],
+            "out_tokens": n_tok,
+            "pipeline_steps": [
+                {"name": s.name, "enabled": s.enabled, "metric": s.metric} for s in pr.steps
+            ],
+            "engine_stats": stats,
+        }
+
     def __repr__(self) -> str:  # pragma: no cover
         return f"MemoryManager(features={sorted(self.features)})"
