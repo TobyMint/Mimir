@@ -41,34 +41,6 @@
       "reclaim_pct": 71.4,
       "coordinated_peak": 70,
       "naive_total": 420
-    },
-    {
-      "num_tasks": 7,
-      "sharing_savings_pct": 24.5,
-      "reclaim_pct": 71.4,
-      "coordinated_peak": 70,
-      "naive_total": 490
-    },
-    {
-      "num_tasks": 8,
-      "sharing_savings_pct": 25.0,
-      "reclaim_pct": 71.4,
-      "coordinated_peak": 70,
-      "naive_total": 560
-    },
-    {
-      "num_tasks": 9,
-      "sharing_savings_pct": 25.4,
-      "reclaim_pct": 71.4,
-      "coordinated_peak": 70,
-      "naive_total": 630
-    },
-    {
-      "num_tasks": 10,
-      "sharing_savings_pct": 25.7,
-      "reclaim_pct": 71.4,
-      "coordinated_peak": 70,
-      "naive_total": 700
     }
   ]
 }
