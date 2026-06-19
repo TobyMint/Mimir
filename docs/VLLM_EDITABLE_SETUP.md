@@ -1,7 +1,7 @@
 # vLLM 0.10.2 接入方式（拍平为普通目录）—— Mimir in-tree patch 基座
 
 > 本文件记录如何把 vLLM v0.10.2 源码以 **普通目录 + 纯 Python（不重编 `_C`）** 的方式接入 Mimir，
-> 使 `import vllm` 指向 `third_party/vllm_flat/` 源码树，便于 in-tree patch。
+> 使 `import vllm` 指向 `third_party/vllm/` 源码树，便于 in-tree patch。
 > vLLM 已**拍平为普通 tracked 目录**（不再是 git submodule），只含可导入的 `vllm/` 包 + 构建文件。
 > 这是 Phase A 的产物，后续所有 vLLM 内核 patch 都基于此。
 
@@ -13,7 +13,7 @@ source scripts/activate_env.sh
 
 该脚本做四件事：
 1. `conda activate mimir`
-2. 写 `.pth`（`site-packages/mimir_vllm_flat.pth` 内容为 `third_party/vllm_flat` 绝对路径）→ `import vllm` 解析到拍平目录
+2. 写 `.pth`（`site-packages/mimir_vllm.pth` 内容为 `third_party/vllm` 绝对路径）→ `import vllm` 解析到拍平目录
 3. 写最小 dist-info（`vllm-0.10.2.dist-info`）→ `importlib.metadata.version("vllm")` 返回 0.10.2（vLLM 平台检测依赖包元数据；.pth 不装元数据，需手动补，否则 `UnspecifiedPlatform` → device 为空）
 4. `torch/lib` 加入 `LD_LIBRARY_PATH`（symlinked `_C.abi3.so` 需找 `libtorch.so`）+ 设 `VLLM_USE_V1=1` `VLLM_ENABLE_V1_MULTIPROCESSING=0`（v1 单进程，父进程可观测 `block_pool`）
 
@@ -21,7 +21,7 @@ source scripts/activate_env.sh
 
 - **非 submodule**：避免 submodule 复杂度（`clone --recursive`、detached HEAD、pointer bump），patch 后的 vLLM 源码直接在仓库里可审计。
 - **非 `pip install -e`**：`setup.py` 用 `setuptools_scm` 从 git 推断版本，拍平目录不是 git repo → 无法 editable 安装。改用 `.pth` 直接挂到 sys.path（editable 的本质），再补 dist-info 解决元数据。
-- **不重编 `_C`**：预编译二进制（`.abi3.so` + `vllm_flash_attn` 包）来自缓存的 0.10.2 wheel，symlink 进 `vllm_flat/vllm/`，与 torch 2.8.0+cu128 ABI 匹配。
+- **不重编 `_C`**：预编译二进制（`.abi3.so` + `vllm_flash_attn` 包）来自缓存的 0.10.2 wheel，symlink 进 `vllm/vllm/`，与 torch 2.8.0+cu128 ABI 匹配。
 
 ## 从零复现（一次性，已做完，记录在此）
 
@@ -29,9 +29,9 @@ source scripts/activate_env.sh
 ```bash
 git submodule add git@github.com:vllm-project/vllm.git third_party/vllm     # SSH
 cd third_party/vllm && git checkout v0.10.2 && cd -
-mkdir -p third_party/vllm_flat
-rsync -a --exclude='__pycache__' --exclude='*.pyc' third_party/vllm/vllm/ third_party/vllm_flat/vllm/
-cp third_party/vllm/{setup.py,pyproject.toml,.gitignore} third_party/vllm_flat/
+mkdir -p third_party/vllm
+rsync -a --exclude='__pycache__' --exclude='*.pyc' third_party/vllm/vllm/ third_party/vllm/vllm/
+cp third_party/vllm/{setup.py,pyproject.toml,.gitignore} third_party/vllm/
 git rm third_party/vllm && rm -rf .git/modules/third_party/vllm && rm .gitmodules
 ```
 
@@ -47,10 +47,10 @@ cp -a /tmp/extract/vllm/vllm_flash_attn third_party/vllm_prebuilt_bin/          
 # symlink 到拍平目录的 vllm/
 TBIN=$(pwd)/third_party/vllm_prebuilt_bin
 for so in _C.abi3.so cumem_allocator.abi3.so _flashmla_C.abi3.so _moe_C.abi3.so; do
-  ln -sf "$TBIN/$so" third_party/vllm_flat/vllm/$so
+  ln -sf "$TBIN/$so" third_party/vllm/vllm/$so
 done
-rm -rf third_party/vllm_flat/vllm/vllm_flash_attn   # 删占位目录
-ln -sfn "$TBIN/vllm_flash_attn" third_party/vllm_flat/vllm/vllm_flash_attn
+rm -rf third_party/vllm/vllm/vllm_flash_attn   # 删占位目录
+ln -sfn "$TBIN/vllm_flash_attn" third_party/vllm/vllm/vllm_flash_attn
 ```
 - 二进制与 torch 2.8.0+cu128 ABI 匹配（同一 wheel 构建），**无需 nvcc 重编**。
 - `third_party/vllm_prebuilt_bin/` 与 symlink 的 `*.so`/`vllm_flash_attn` 已在 `.gitignore`（不入库）。
@@ -80,8 +80,8 @@ PY
 
 | 项 | 值 |
 | --- | --- |
-| vLLM 源码树（拍平） | `third_party/vllm_flat/vllm/`（普通 tracked 目录，改即生效） |
-| 预编译二进制 | `third_party/vllm_prebuilt_bin/`（gitignored，symlink 进 vllm_flat） |
+| vLLM 源码树（拍平） | `third_party/vllm/vllm/`（普通 tracked 目录，改即生效） |
+| 预编译二进制 | `third_party/vllm_prebuilt_bin/`（gitignored，symlink 进 vllm） |
 | 激活脚本 | `scripts/activate_env.sh`（幂等写 .pth + dist-info） |
 | v1 单进程开关 | `VLLM_USE_V1=1` `VLLM_ENABLE_V1_MULTIPROCESSING=0` |
 | block_pool 遍历 | `llm.llm_engine.engine_core.engine_core.scheduler.kv_cache_manager.block_pool` |

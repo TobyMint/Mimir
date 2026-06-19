@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# 激活脚本：进入 vLLM (已拍平为 third_party/vllm_flat 普通目录) + Mimir 工作环境。
+# 激活脚本：进入 vLLM (已拍平为 third_party/vllm 普通目录) + Mimir 工作环境。
 #
 # 用法：source scripts/activate_env.sh
 #
 # 做四件事：
 # 1. conda activate mimir
-# 2. 确保 third_party/vllm_flat 通过 .pth 注册到 site-packages（import vllm 解析到拍平目录）
+# 2. 确保 third_party/vllm 通过 .pth 注册到 site-packages（import vllm 解析到拍平目录）
 # 3. 把 torch/lib 加入 LD_LIBRARY_PATH（_C.abi3.so 需找 libtorch.so）
 # 4. 设置 v1 单进程（VLLM_USE_V1=1, VLLM_ENABLE_V1_MULTIPROCESSING=0）
 
@@ -16,10 +16,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source /opt/miniconda3/etc/profile.d/conda.sh
 conda activate mimir
 
-VLLM_FLAT="$REPO_ROOT/third_party/vllm_flat"
-# 把 vllm_flat 注册到 site-packages（幂等）。.pth 第一行是绝对路径，site.py 会加到 sys.path。
+VLLM_FLAT="$REPO_ROOT/third_party/vllm"
+# 把 vllm 注册到 site-packages（幂等）。.pth 第一行是绝对路径，site.py 会加到 sys.path。
 SITE_PKGS=$(python -c "import site; print(site.getsitepackages()[0])")
-PTH="$SITE_PKGS/mimir_vllm_flat.pth"
+PTH="$SITE_PKGS/mimir_vllm.pth"
 if [ -d "$VLLM_FLAT/vllm" ]; then
   echo "$VLLM_FLAT" > "$PTH"
 else

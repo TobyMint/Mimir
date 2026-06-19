@@ -76,7 +76,7 @@
 
 ## 续上指南（给下一个会话）
 
-**当前完整度**：Phase A-O 全部完成。vLLM v0.10.2 拍平为普通目录 `third_party/vllm_flat`（9-10 文件 in-tree patch），外部优化层 11 方向，两个决定性引擎级 A/B（Phase M 单 agent used 69→0；Phase O 3-agent 并发 used 14→0），多模型泛化（1.7B/4B），92 测试，一键复现。
+**当前完整度**：Phase A-O 全部完成。vLLM v0.10.2 拍平为普通目录 `third_party/vllm`（9-10 文件 in-tree patch），外部优化层 11 方向，两个决定性引擎级 A/B（Phase M 单 agent used 69→0；Phase O 3-agent 并发 used 14→0），多模型泛化（1.7B/4B），92 测试，一键复现。
 
 **如何启动**：`source scripts/activate_env.sh`（fresh clone 先 `bash scripts/setup_vllm_binaries.sh`）。
 
@@ -91,7 +91,7 @@
 - 频繁 commit + push（每次逻辑里程碑）。
 - GitHub 仅 SSH（HTTPS 被屏蔽）。
 - GPU 忙→轻量正确性；空闲→重 benchmark。
-- vLLM patch 是纯 Python（`third_party/vllm_flat/vllm/v1/...`），不重编 `_C`。
+- vLLM patch 是纯 Python（`third_party/vllm/vllm/v1/...`），不重编 `_C`。
 - 真实指标用 TTFT + new_prefill + used_blocks；E2E 在共享 GPU 上噪声大需多次平均。
 
 **邮件通知**：`python3 ~/.claude/hooks/notify_email.py "<标题>"`（163，`x2406862525@163.com`）。
@@ -99,7 +99,7 @@
 ## 2026-06-19 会话总结（vLLM in-tree patch 完整推进）
 
 **本会话完成**（Phase A-Q + 拍平 + 硬件）：
-- vLLM v0.10.2 从 submodule 拍平为普通目录 `third_party/vllm_flat`（纯 Python patch，不重编 `_C`，`.pth`+dist-info 接入）。
+- vLLM v0.10.2 从 submodule 拍平为普通目录 `third_party/vllm`（纯 Python patch，不重编 `_C`，`.pth`+dist-info 接入）。
 - 10 个 in-tree patch 文件：B 块级统计 / C 任务边界回收 / D CoW 记账 / E per-block pin / F fp8 降级 / G mimir 策略 / I pin_hits / J reclaim_evictable / L 自动回收 / P lifecycle-aware 分配。
 - 四个决定性引擎级 A/B（patched v1 vs 原生，used_blocks）：M 单agent 69→0 / O 3agent并发 14→0 / P KV池压力 27→0 / **Q 工具调用并发 262→0（最强一击）**。
 - 多模型泛化（Qwen3-1.7B + 4B 验证 lifecycle+CoW）。

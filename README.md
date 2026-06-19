@@ -26,7 +26,7 @@ KV Cache、上下文结构及显存分配机制的系统性优化，有效降低
 ## vLLM 0.10.2 In-Tree Patch（内核级优化）
 
 Mimir 不仅在 vLLM 之上做外部封装，更**直接 patch 了 vLLM v0.10.2 源码**（拍平为普通目录
-`third_party/vllm_flat`（源自 v0.10.2 fork `mimir-patches-v0.10.2`），纯 Python、不重编 `_C`）：
+`third_party/vllm`（源自 v0.10.2 fork `mimir-patches-v0.10.2`），纯 Python、不重编 `_C`）：
 
 | 引擎层 patch | 真实验证 |
 | --- | --- |
@@ -77,14 +77,14 @@ Mimir/
 
 ## 快速开始
 
-> **重要**：vLLM v0.10.2 已**拍平为普通目录** `third_party/vllm_flat`（不再是 submodule），
+> **重要**：vLLM v0.10.2 已**拍平为普通目录** `third_party/vllm`（不再是 submodule），
 > 通过 `.pth` + dist-info 接入（详见 [`docs/VLLM_EDITABLE_SETUP.md`](docs/VLLM_EDITABLE_SETUP.md)）。
 > 因此新 clone / 新环境**必须先 `source scripts/activate_env.sh`** 才能 `import vllm`。
 > 该脚本幂等地：`conda activate mimir` → 写 `.pth`/dist-info → `LD_LIBRARY_PATH += torch/lib` → v1 单进程 env。
 
 ```bash
 # 0. 首次：重建 vLLM 预编译二进制（fresh clone 需此步，~1 分钟）
-bash scripts/setup_vllm_binaries.sh   # 从 vllm==0.10.2 wheel 提取 .so + flash_attn，symlink 进 vllm_flat
+bash scripts/setup_vllm_binaries.sh   # 从 vllm==0.10.2 wheel 提取 .so + flash_attn，symlink 进 vllm
 #    （vllm_prebuilt_bin/ 被 gitignore，不入库；详见 docs/VLLM_EDITABLE_SETUP.md）
 
 # 1. conda 环境 mimir（python 3.11 + torch 2.8.0+cu128 + vllm 0.10.2 依赖）

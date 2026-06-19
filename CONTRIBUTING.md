@@ -21,9 +21,9 @@ source scripts/activate_env.sh        # 每次会话：vLLM flat 接入 + v1 单
 - 单元测试（`pytest`）：新增功能补对应测试，无 GPU 跑通逻辑测试。
 - 需 GPU 的测试标 `@pytest.mark.gpu` / `@pytest.mark.slow`，`make test-fast` 跳过。
 
-## vLLM in-tree patch（third_party/vllm_flat/）
+## vLLM in-tree patch（third_party/vllm/）
 
-- vLLM v0.10.2 **拍平为普通目录**（非 submodule），patch 直接改 `third_party/vllm_flat/vllm/v1/...`。
+- vLLM v0.10.2 **拍平为普通目录**（非 submodule），patch 直接改 `third_party/vllm/vllm/v1/...`。
 - **只改纯 Python**（不重编 `_C`）；涉及 C++/CUDA 算子签名的改动不支持。
 - patch 清单见 [`docs/VLLM_PATCH_INVENTORY.md`](VLLM_PATCH_INVENTORY.md)。
 - 新 patch 模式：加 `mimir_*` 方法 + 在 `get_mimir_stats()` 导出计数器 + 在 `docs/VLLM_PATCH_INVENTORY.md` 登记。
@@ -31,7 +31,7 @@ source scripts/activate_env.sh        # 每次会话：vLLM flat 接入 + v1 单
 ## 新增优化方向
 
 1. 外部层（请求侧变换）：在 `src/mimir/<方向>/` 加模块 + `MemoryManager.apply()` 编排 + `tests/`。
-2. 引擎层（vLLM in-tree）：在 `third_party/vllm_flat/vllm/v1/` 加 patch + `engine_vllm_v1.py` adapter 方法 + 验证脚本 `scripts/run_phase_<x>.py`。
+2. 引擎层（vLLM in-tree）：在 `third_party/vllm/vllm/v1/` 加 patch + `engine_vllm_v1.py` adapter 方法 + 验证脚本 `scripts/run_phase_<x>.py`。
 3. 带 GPU 验证脚本用 subprocess-per-side（避免双引擎叠加 OOM）；指标用 TTFT + new_prefill + used_blocks（E2E 在共享 GPU 噪声大需多次平均，见 `docs/` 与 memory）。
 
 ## 提交约定

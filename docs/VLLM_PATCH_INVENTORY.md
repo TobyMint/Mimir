@@ -1,6 +1,6 @@
 # vLLM 0.10.2 In-Tree Patch 清单（Mimir）
 
-> 本文件记录 Mimir 对 vLLM v0.10.2 源码（普通目录 `third_party/vllm_flat`（拍平自 v0.10.2 fork）
+> 本文件记录 Mimir 对 vLLM v0.10.2 源码（普通目录 `third_party/vllm`（拍平自 v0.10.2 fork）
 > 分支）所做的全部 **纯 Python** in-tree patch。
 > 所有 patch 不重编 `_C`（详见 [`VLLM_EDITABLE_SETUP.md`](VLLM_EDITABLE_SETUP.md)）。
 > 这是「我们修改了 vLLM 内核」的可复现证据。
@@ -9,7 +9,7 @@
 
 ```bash
 source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=1 InprocClient
-（vLLM 已拍平为 third_party/vllm_flat 普通目录，无需 submodule checkout）
+（vLLM 已拍平为 third_party/vllm 普通目录，无需 submodule checkout）
 ```
 （详见 `VLLM_EDITABLE_SETUP.md`：`source scripts/activate_env.sh` 即可。拍平目录 + .pth + dist-info，不重编 `_C`。）
 
