@@ -11,7 +11,7 @@
     "second_prompt_tokens": 1114,
     "second_cached_tokens": 1088,
     "second_new_prefill": 26,
-    "second_ttft_ms": 15.623807907104492,
+    "second_ttft_ms": 15.399456024169922,
     "manual_evicted_reasoning": 0,
     "class_counts_after_first": {
       "system": 7,
@@ -35,7 +35,7 @@
     "second_prompt_tokens": 1173,
     "second_cached_tokens": 1136,
     "second_new_prefill": 37,
-    "second_ttft_ms": 15.969276428222656,
+    "second_ttft_ms": 15.810489654541016,
     "manual_evicted_reasoning": 342,
     "class_counts_after_first": {
       "system": 7,

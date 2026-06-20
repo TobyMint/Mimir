@@ -3,9 +3,9 @@
     "label": "branch_0",
     "peak_gpu_mem_alloc_gib": 0.0,
     "peak_gpu_mem_reserved_gib": 0.0,
-    "ttft_ms": 29.334306716918945,
-    "e2e_latency_s": 1.9168308405205607,
-    "throughput_tok_per_s": 41.73555553721898,
+    "ttft_ms": 28.348922729492188,
+    "e2e_latency_s": 1.8784031076356769,
+    "throughput_tok_per_s": 42.58936735932844,
     "task_success": true,
     "extra": {
       "workload": "multi_stage",
@@ -13,7 +13,7 @@
       "num_prompt_tokens": 82,
       "num_output_tokens": 80,
       "num_cached_tokens": 0,
-      "ttft_ms": 29.334306716918945,
+      "ttft_ms": 28.348922729492188,
       "req_e2e_s": null
     }
   },
@@ -21,9 +21,9 @@
     "label": "branch_1",
     "peak_gpu_mem_alloc_gib": 0.0,
     "peak_gpu_mem_reserved_gib": 0.0,
-    "ttft_ms": 16.048669815063477,
-    "e2e_latency_s": 1.008117045275867,
-    "throughput_tok_per_s": 79.35586485209001,
+    "ttft_ms": 15.091419219970703,
+    "e2e_latency_s": 1.0115023786202073,
+    "throughput_tok_per_s": 79.09027372642285,
     "task_success": true,
     "extra": {
       "workload": "multi_stage",
@@ -31,7 +31,7 @@
       "num_prompt_tokens": 80,
       "num_output_tokens": 80,
       "num_cached_tokens": 48,
-      "ttft_ms": 16.048669815063477,
+      "ttft_ms": 15.091419219970703,
       "req_e2e_s": null
     }
   },
@@ -39,9 +39,9 @@
     "label": "branch_2",
     "peak_gpu_mem_alloc_gib": 0.0,
     "peak_gpu_mem_reserved_gib": 0.0,
-    "ttft_ms": 15.345573425292969,
-    "e2e_latency_s": 1.013943781144917,
-    "throughput_tok_per_s": 78.89983792756856,
+    "ttft_ms": 15.25735855102539,
+    "e2e_latency_s": 1.0013159764930606,
+    "throughput_tok_per_s": 79.89486024200517,
     "task_success": true,
     "extra": {
       "workload": "multi_stage",
@@ -49,7 +49,7 @@
       "num_prompt_tokens": 81,
       "num_output_tokens": 80,
       "num_cached_tokens": 48,
-      "ttft_ms": 15.345573425292969,
+      "ttft_ms": 15.25735855102539,
       "req_e2e_s": null
     }
   },
@@ -57,9 +57,9 @@
     "label": "branch_3",
     "peak_gpu_mem_alloc_gib": 0.0,
     "peak_gpu_mem_reserved_gib": 0.0,
-    "ttft_ms": 14.901399612426758,
-    "e2e_latency_s": 1.0102235963568091,
-    "throughput_tok_per_s": 79.1903894231987,
+    "ttft_ms": 14.724969863891602,
+    "e2e_latency_s": 1.0056123146787286,
+    "throughput_tok_per_s": 79.55352060854413,
     "task_success": true,
     "extra": {
       "workload": "multi_stage",
@@ -67,7 +67,7 @@
       "num_prompt_tokens": 80,
       "num_output_tokens": 80,
       "num_cached_tokens": 48,
-      "ttft_ms": 14.901399612426758,
+      "ttft_ms": 14.724969863891602,
       "req_e2e_s": null
     }
   }

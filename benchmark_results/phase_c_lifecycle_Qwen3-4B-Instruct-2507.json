@@ -2,7 +2,7 @@
   "model": "Qwen3-4B-Instruct-2507",
   "before_reclaim": {
     "used_blocks": 10,
-    "total_blocks": 1780,
+    "total_blocks": 5534,
     "mimir_lifecycle_reclaims": 0
   },
   "after_reclaim": {
@@ -15,13 +15,25 @@
         "reclaimed": 4,
         "stats": {
           "used_blocks": 6,
-          "total_blocks": 1780,
-          "utilization": -0.0022484541877458852,
+          "total_blocks": 5534,
+          "utilization": -0.0007229351165733977,
           "num_running_reqs": 0,
           "num_waiting_reqs": 0,
           "mimir_lifecycle_reclaims": 4,
           "mimir_cow_reuses": 0,
-          "mimir_pin_hits": 0
+          "mimir_pin_hits": 0,
+          "mimir_block_class": {
+            "block_class_counts": {
+              "unknown": 6
+            },
+            "class_evicts": {
+              "reasoning": 0,
+              "user": 0,
+              "tool_result": 0,
+              "system": 0,
+              "unknown": 0
+            }
+          }
         }
       },
       {
@@ -29,13 +41,23 @@
         "reclaimed": 6,
         "stats": {
           "used_blocks": 0,
-          "total_blocks": 1780,
-          "utilization": -0.005621135469364713,
+          "total_blocks": 5534,
+          "utilization": -0.0018073377914331612,
           "num_running_reqs": 0,
           "num_waiting_reqs": 0,
           "mimir_lifecycle_reclaims": 10,
           "mimir_cow_reuses": 0,
-          "mimir_pin_hits": 0
+          "mimir_pin_hits": 0,
+          "mimir_block_class": {
+            "block_class_counts": {},
+            "class_evicts": {
+              "reasoning": 0,
+              "user": 0,
+              "tool_result": 0,
+              "system": 0,
+              "unknown": 0
+            }
+          }
         }
       }
     ]

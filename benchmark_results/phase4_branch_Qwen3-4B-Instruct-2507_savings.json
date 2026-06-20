@@ -20,6 +20,6 @@
     "total_cached_tokens": 144,
     "total_new_prefill_tokens": 179,
     "prefix_reuse_pct": 44.6,
-    "avg_ttft_ms": 18.907487392425537
+    "avg_ttft_ms": 18.35566759109497
   }
 }

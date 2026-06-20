@@ -18,9 +18,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 10,
-            "ttft_ms": 33.9818000793457,
+            "ttft_ms": 34.25288200378418,
             "new_prefill_tokens": 154,
-            "e2e_s": 0.592,
+            "e2e_s": 0.589,
             "context_msgs": 2
           },
           {
@@ -29,9 +29,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 285,
-            "ttft_ms": 598.9158153533936,
+            "ttft_ms": 601.292610168457,
             "new_prefill_tokens": 4396,
-            "e2e_s": 0.721,
+            "e2e_s": 0.719,
             "context_msgs": 4
           },
           {
@@ -42,7 +42,7 @@
             "used_blocks": -1,
             "ttft_ms": null,
             "new_prefill_tokens": null,
-            "e2e_s": 0.046,
+            "e2e_s": 0.044,
             "context_msgs": 6
           }
         ]
@@ -62,9 +62,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 293,
-            "ttft_ms": 30.32374382019043,
+            "ttft_ms": 30.19261360168457,
             "new_prefill_tokens": 133,
-            "e2e_s": 0.122,
+            "e2e_s": 0.12,
             "context_msgs": 2
           },
           {
@@ -73,9 +73,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 615,
-            "ttft_ms": 672.2126007080078,
+            "ttft_ms": 675.5421161651611,
             "new_prefill_tokens": 5145,
-            "e2e_s": 0.799,
+            "e2e_s": 0.802,
             "context_msgs": 4
           },
           {
@@ -84,9 +84,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 649,
-            "ttft_ms": 113.97767066955566,
+            "ttft_ms": 114.36843872070312,
             "new_prefill_tokens": 537,
-            "e2e_s": 0.243,
+            "e2e_s": 0.245,
             "context_msgs": 5
           },
           {
@@ -95,9 +95,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 685,
-            "ttft_ms": 117.43831634521484,
+            "ttft_ms": 118.17359924316406,
             "new_prefill_tokens": 572,
-            "e2e_s": 0.254,
+            "e2e_s": 0.249,
             "context_msgs": 6
           },
           {
@@ -106,7 +106,7 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 720,
-            "ttft_ms": 120.65982818603516,
+            "ttft_ms": 121.58393859863281,
             "new_prefill_tokens": 560,
             "e2e_s": 0.256,
             "context_msgs": 7
@@ -117,9 +117,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 754,
-            "ttft_ms": 124.35698509216309,
+            "ttft_ms": 125.16212463378906,
             "new_prefill_tokens": 550,
-            "e2e_s": 0.262,
+            "e2e_s": 0.263,
             "context_msgs": 8
           },
           {
@@ -128,9 +128,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 763,
-            "ttft_ms": 50.79293251037598,
+            "ttft_ms": 50.77552795410156,
             "new_prefill_tokens": 142,
-            "e2e_s": 0.189,
+            "e2e_s": 0.19,
             "context_msgs": 9
           }
         ]
@@ -150,9 +150,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 772,
-            "ttft_ms": 26.111841201782227,
+            "ttft_ms": 26.338577270507812,
             "new_prefill_tokens": 140,
-            "e2e_s": 0.117,
+            "e2e_s": 0.116,
             "context_msgs": 2
           },
           {
@@ -161,9 +161,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 809,
-            "ttft_ms": 86.32826805114746,
+            "ttft_ms": 86.67397499084473,
             "new_prefill_tokens": 595,
-            "e2e_s": 0.179,
+            "e2e_s": 0.181,
             "context_msgs": 3
           },
           {
@@ -172,9 +172,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 1080,
-            "ttft_ms": 597.6178646087646,
+            "ttft_ms": 602.665901184082,
             "new_prefill_tokens": 4339,
-            "e2e_s": 0.721,
+            "e2e_s": 0.727,
             "context_msgs": 5
           },
           {
@@ -183,7 +183,7 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 1118,
-            "ttft_ms": 118.47090721130371,
+            "ttft_ms": 117.99216270446777,
             "new_prefill_tokens": 610,
             "e2e_s": 0.247,
             "context_msgs": 6
@@ -194,9 +194,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 1120,
-            "ttft_ms": 24.602651596069336,
+            "ttft_ms": 24.312973022460938,
             "new_prefill_tokens": 27,
-            "e2e_s": 0.153,
+            "e2e_s": 0.155,
             "context_msgs": 7
           },
           {
@@ -205,7 +205,7 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 1158,
-            "ttft_ms": 123.02279472351074,
+            "ttft_ms": 122.28894233703613,
             "new_prefill_tokens": 614,
             "e2e_s": 0.254,
             "context_msgs": 8
@@ -216,9 +216,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 1165,
-            "ttft_ms": 32.08589553833008,
+            "ttft_ms": 31.551599502563477,
             "new_prefill_tokens": 120,
-            "e2e_s": 0.166,
+            "e2e_s": 0.163,
             "context_msgs": 9
           },
           {
@@ -227,7 +227,7 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 1173,
-            "ttft_ms": 50.9185791015625,
+            "ttft_ms": 50.62365531921387,
             "new_prefill_tokens": 136,
             "e2e_s": 0.183,
             "context_msgs": 10
@@ -238,9 +238,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 1206,
-            "ttft_ms": 122.24364280700684,
+            "ttft_ms": 122.11036682128906,
             "new_prefill_tokens": 524,
-            "e2e_s": 0.259,
+            "e2e_s": 0.258,
             "context_msgs": 11
           },
           {
@@ -249,9 +249,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 1235,
-            "ttft_ms": 105.52763938903809,
+            "ttft_ms": 106.08339309692383,
             "new_prefill_tokens": 459,
-            "e2e_s": 0.246,
+            "e2e_s": 0.245,
             "context_msgs": 12
           }
         ]
@@ -275,9 +275,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 33.92934799194336,
+            "ttft_ms": 34.48343276977539,
             "new_prefill_tokens": 154,
-            "e2e_s": 0.6,
+            "e2e_s": 0.597,
             "context_msgs": 2
           },
           {
@@ -286,9 +286,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 51.471710205078125,
+            "ttft_ms": 55.58323860168457,
             "new_prefill_tokens": 270,
-            "e2e_s": 0.143,
+            "e2e_s": 0.151,
             "context_msgs": 4
           },
           {
@@ -297,9 +297,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 50.858497619628906,
+            "ttft_ms": 51.77593231201172,
             "new_prefill_tokens": 382,
-            "e2e_s": 0.143,
+            "e2e_s": 0.144,
             "context_msgs": 6
           }
         ]
@@ -319,7 +319,7 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 30.422449111938477,
+            "ttft_ms": 30.364513397216797,
             "new_prefill_tokens": 133,
             "e2e_s": 0.121,
             "context_msgs": 2
@@ -330,9 +330,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 32.106637954711914,
+            "ttft_ms": 32.3638916015625,
             "new_prefill_tokens": 253,
-            "e2e_s": 0.123,
+            "e2e_s": 0.124,
             "context_msgs": 4
           },
           {
@@ -341,9 +341,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 111.7098331451416,
+            "ttft_ms": 111.99712753295898,
             "new_prefill_tokens": 781,
-            "e2e_s": 0.206,
+            "e2e_s": 0.207,
             "context_msgs": 5
           },
           {
@@ -352,9 +352,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 175.52852630615234,
+            "ttft_ms": 175.5995750427246,
             "new_prefill_tokens": 1344,
-            "e2e_s": 0.274,
+            "e2e_s": 0.276,
             "context_msgs": 6
           },
           {
@@ -363,9 +363,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 228.29556465148926,
+            "ttft_ms": 229.034423828125,
             "new_prefill_tokens": 1892,
-            "e2e_s": 0.331,
+            "e2e_s": 0.332,
             "context_msgs": 7
           },
           {
@@ -374,7 +374,7 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 316.99156761169434,
+            "ttft_ms": 315.5064582824707,
             "new_prefill_tokens": 2442,
             "e2e_s": 0.422,
             "context_msgs": 8
@@ -385,9 +385,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 334.0451717376709,
+            "ttft_ms": 332.3371410369873,
             "new_prefill_tokens": 2578,
-            "e2e_s": 0.44,
+            "e2e_s": 0.439,
             "context_msgs": 9
           }
         ]
@@ -407,9 +407,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 26.02839469909668,
+            "ttft_ms": 26.28302574157715,
             "new_prefill_tokens": 140,
-            "e2e_s": 0.116,
+            "e2e_s": 0.117,
             "context_msgs": 2
           },
           {
@@ -418,9 +418,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 98.4034538269043,
+            "ttft_ms": 97.47958183288574,
             "new_prefill_tokens": 723,
-            "e2e_s": 0.193,
+            "e2e_s": 0.192,
             "context_msgs": 3
           },
           {
@@ -429,7 +429,7 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 112.83493041992188,
+            "ttft_ms": 112.58721351623535,
             "new_prefill_tokens": 835,
             "e2e_s": 0.207,
             "context_msgs": 5
@@ -440,9 +440,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 185.8067512512207,
+            "ttft_ms": 186.19847297668457,
             "new_prefill_tokens": 1442,
-            "e2e_s": 0.287,
+            "e2e_s": 0.288,
             "context_msgs": 6
           },
           {
@@ -451,9 +451,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 195.32275199890137,
+            "ttft_ms": 195.10650634765625,
             "new_prefill_tokens": 1467,
-            "e2e_s": 0.296,
+            "e2e_s": 0.297,
             "context_msgs": 7
           },
           {
@@ -462,9 +462,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 265.81740379333496,
+            "ttft_ms": 265.4719352722168,
             "new_prefill_tokens": 2070,
-            "e2e_s": 0.37,
+            "e2e_s": 0.371,
             "context_msgs": 8
           },
           {
@@ -473,7 +473,7 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 282.90748596191406,
+            "ttft_ms": 282.3941707611084,
             "new_prefill_tokens": 2184,
             "e2e_s": 0.388,
             "context_msgs": 9
@@ -484,9 +484,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 292.6924228668213,
+            "ttft_ms": 292.9730415344238,
             "new_prefill_tokens": 2312,
-            "e2e_s": 0.399,
+            "e2e_s": 0.401,
             "context_msgs": 10
           },
           {
@@ -495,9 +495,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 357.8927516937256,
+            "ttft_ms": 355.8943271636963,
             "new_prefill_tokens": 2828,
-            "e2e_s": 0.468,
+            "e2e_s": 0.467,
             "context_msgs": 11
           },
           {
@@ -506,9 +506,9 @@
             "tool_called": null,
             "tool_result_bytes": 0,
             "used_blocks": 0,
-            "ttft_ms": 431.64539337158203,
+            "ttft_ms": 429.8734664916992,
             "new_prefill_tokens": 3291,
-            "e2e_s": 0.545,
+            "e2e_s": 0.544,
             "context_msgs": 12
           }
         ]
@@ -524,9 +524,9 @@
       "native_steps": 3,
       "mimir_steps": 3,
       "native_crashed": true,
-      "native_matched_ttft_ms": 316.4,
-      "mimir_matched_ttft_ms": 42.7,
-      "matched_ttft_change_pct": -86.5,
+      "native_matched_ttft_ms": 317.8,
+      "mimir_matched_ttft_ms": 45.0,
+      "matched_ttft_change_pct": -85.8,
       "matched_steps": 2,
       "native_last_new_prefill": 4396,
       "mimir_last_new_prefill": 270,
@@ -540,9 +540,9 @@
       "native_steps": 7,
       "mimir_steps": 7,
       "native_crashed": false,
-      "native_matched_ttft_ms": 175.7,
-      "mimir_matched_ttft_ms": 175.6,
-      "matched_ttft_change_pct": -0.1,
+      "native_matched_ttft_ms": 176.5,
+      "mimir_matched_ttft_ms": 175.3,
+      "matched_ttft_change_pct": -0.7,
       "matched_steps": 7,
       "native_last_new_prefill": 142,
       "mimir_last_new_prefill": 2578,
@@ -556,9 +556,9 @@
       "native_steps": 10,
       "mimir_steps": 10,
       "native_crashed": false,
-      "native_matched_ttft_ms": 128.7,
-      "mimir_matched_ttft_ms": 224.9,
-      "matched_ttft_change_pct": 74.7,
+      "native_matched_ttft_ms": 129.1,
+      "mimir_matched_ttft_ms": 224.4,
+      "matched_ttft_change_pct": 73.8,
       "matched_steps": 10,
       "native_last_new_prefill": 459,
       "mimir_last_new_prefill": 3291,

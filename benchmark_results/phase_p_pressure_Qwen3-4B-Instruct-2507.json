@@ -1,7 +1,7 @@
 {
   "model": "Qwen3-4B-Instruct-2507",
   "scenario": "6 long-context tasks filling a small KV pool (lifecycle-aware allocation pressure)",
-  "kv_pool_total_blocks": 707,
+  "kv_pool_total_blocks": 5534,
   "native": {
     "final_used_blocks": 27,
     "rows": [
