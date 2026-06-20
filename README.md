@@ -2,11 +2,14 @@
 
 > Mimir 取名自北欧神话中以智慧与记忆闻名者，寓意本项目聚焦于智能体推理过程中**记忆（KV Cache / 上下文）的管理与复用**。
 >
-> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — 四个决定性引擎级 A/B（used_blocks 74 / 14 / 27 / **262** → 0）、tool_call TTFT **-93%**、分支 CoW **-78.7%**、block-class 创新核心、DeepSeek 真实轨迹 + LLM-judge 保真、多模型泛化。
+> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — **真·并发压测（util=0.9 真实大池子，native N=32 退化 vs Mimir N=64 不退化）**、四个引擎级 A/B（used_blocks 74 / 14 / 27 / **262** → 0）、tool_call TTFT **-93%**、分支 CoW **-78.7%**、block-class 创新核心、DeepSeek 真实轨迹 + LLM-judge 保真、多模型泛化。
+>
+> 🚀 **真·并发压测（核心评测）**：同一张榨干的卡（`gpu_memory_utilization=0.9`，KV 池 5534 块），并发 agent 数 N 递增真批量提交——原生 vLLM 在 **N=32** 撞池子上限退化（LRU 淘汰活跃块），Mimir 到 **N=64** 仍 `used=0` 不退化。不靠配置夹击，只靠 KV 显存压力见真章。
+> ![真·并发压测](benchmark_results/concurrent_press_Qwen3-4B-Instruct-2507_curves.png)
 >
 > 🎯 **创新核心（Phase BC）**：tool-call 感知的 per-block KV 类别管理——给 KV 块打语义类别标签（system/user/reasoning/tool_result），按类别优先级淘汰。无论文做过，是 Mimir 的夺冠差异化。详见 [技术方案 §3.7](docs/技术方案.md)。
 >
-> 🔥 **最强一击（Phase Q，工具调用并发）**：3 个 agent × 2 轮工具调用（每轮含 ~5KB 工具返回），原生 vLLM KV 累积到 **262 块**，Mimir（工具外置 + 逐任务自动回收）保持 **0 块**（reclaims=42）。\
+> 🔥 **最强场景（Phase Q，工具调用并发）**：3 个 agent × 2 轮工具调用（每轮含 ~5KB 工具返回），原生 vLLM KV 累积到 **262 块**，Mimir（工具外置 + 逐任务自动回收）保持 **0 块**（reclaims=42）。
 > ![Phase Q 工具调用并发 A/B](benchmark_results/phase_q_toolcall_concurrent_Qwen3-4B-Instruct-2507_curves.png)
 >
 > 🎞️ **动态演示**：[Agent-Loop GIF](benchmark_results/agent_loop_demo.gif)（native 第 2-5 步崩溃 vs Mimir 全程 used=0）｜ [Phase Q 逐轮揭示 262→0](benchmark_results/phase_q_demo.gif)

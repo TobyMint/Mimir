@@ -1,9 +1,28 @@
 # Mimir 结果总览（评审速读）
 
 > 一页纸看懂 Mimir 的优化效果。全部真实测量，Qwen3-4B-Instruct-2507，单卡 RTX 3090，vLLM 0.10.2。
+> **真实部署配置**：`gpu_memory_utilization=0.9`（vLLM 默认，榨干单卡），KV 池 **5534 块**（88544 token）。
 > 详见 `docs/测试报告.md`、`docs/VLLM_PATCH_INVENTORY.md`、`benchmark_results/`。
 
-## 头图：引擎级决定性 A/B（used_blocks，越低越好）
+## 头图：真·并发压测（util=0.9 真实大池子，核心评测）
+
+同一张榨干的卡（0.9，KV 池 5534 块），并发 agent 数 N 递增，测 native 退化点 vs Mimir 不退化。
+**这是真实部署场景下最有说服力的指标**——不靠配置夹击（max_model_len=32768 给足），只靠 KV 显存压力。
+
+| 并发数 N | native peak used | Mimir peak used | native | Mimir |
+| --- | --- | --- | --- | --- |
+| 1 | 270 | **0** | OK | OK |
+| 4 | 1080 | **0** | OK | OK |
+| 16 | 4320 | **0** | OK | OK |
+| **32** | **5532**（撞池子上限 5534） | **0** | **退化**（LRU 淘汰活跃块） | OK |
+| 48 | 5533 | **0** | 退化 | OK |
+| 64 | 5533 | **0** | 退化 | **OK（仍不退化）** |
+
+**退化点：native@N=32，Mimir 到 N=64 仍 peak=0 不退化。** 同一张卡，Mimir 并发上限更高——靠
+lifecycle 任务边界回收 + block-class 类别感知淘汰 + 工具外置，KV 显存稳态为 0。
+图表：`benchmark_results/concurrent_press_Qwen3-4B-Instruct-2507_curves.png`
+
+## 引擎级 A/B（used_blocks，越低越好，交替场景）
 
 | 场景 | 原生 vLLM | Mimir (in-tree patched v1) | 说明 |
 | --- | --- | --- | --- |
