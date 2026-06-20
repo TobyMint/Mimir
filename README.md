@@ -2,12 +2,14 @@
 
 > Mimir 取名自北欧神话中以智慧与记忆闻名者，寓意本项目聚焦于智能体推理过程中**记忆（KV Cache / 上下文）的管理与复用**。
 >
-> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — 四个决定性引擎级 A/B（used_blocks 69 / 14 / 27 / **262** → 0）、tool_call TTFT **-91%**、分支 CoW **-78.7%**、多模型泛化。
+> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — 四个决定性引擎级 A/B（used_blocks 74 / 14 / 27 / **262** → 0）、tool_call TTFT **-93%**、分支 CoW **-78.7%**、block-class 创新核心、DeepSeek 真实轨迹 + LLM-judge 保真、多模型泛化。
+>
+> 🎯 **创新核心（Phase BC）**：tool-call 感知的 per-block KV 类别管理——给 KV 块打语义类别标签（system/user/reasoning/tool_result），按类别优先级淘汰。无论文做过，是 Mimir 的夺冠差异化。详见 [技术方案 §3.7](docs/技术方案.md)。
 >
 > 🔥 **最强一击（Phase Q，工具调用并发）**：3 个 agent × 2 轮工具调用（每轮含 ~5KB 工具返回），原生 vLLM KV 累积到 **262 块**，Mimir（工具外置 + 逐任务自动回收）保持 **0 块**（reclaims=42）。\
 > ![Phase Q 工具调用并发 A/B](benchmark_results/phase_q_toolcall_concurrent_Qwen3-4B-Instruct-2507_curves.png)
 >
-> 🎞️ **动态演示**：[Phase Q 逐轮揭示 262→0](benchmark_results/phase_q_demo.gif) ｜ [实时内存仪表盘](benchmark_results/dashboard_demo.gif)（三层冷热 / 生命周期 / 分支 CoW / 四 A/B 汇总）
+> 🎞️ **动态演示**：[Agent-Loop GIF](benchmark_results/agent_loop_demo.gif)（native 第 2-5 步崩溃 vs Mimir 全程 used=0）｜ [Phase Q 逐轮揭示 262→0](benchmark_results/phase_q_demo.gif)
 
 <p align="center">
   <b>研究创新赛道 · 面向智能体的内存管理系统设计与实现（高校赛题）</b>
@@ -35,6 +37,8 @@ Mimir 不仅在 vLLM 之上做外部封装，更**直接 patch 了 vLLM v0.10.2 
 | **per-block KV-pin**（lifecycle-bounded） | agent 3 块 in agent B 压力下 **3/3 存活** |
 | **fp8 KV 优雅降级**（arg_utils oracle） | 不支持的硬件上**降级 bf16**而非崩溃 |
 | **'mimir' 调度策略**（`SchedulerPolicy` + `MimirRequestQueue`） | `scheduling_policy="mimir"` 跑通 |
+| **【创新】block-class 类别感知淘汰**（`block_pool.mimir_class_aware_evict`） | `evict(57)` 只淘汰 reasoning 57 块、tool_result/system **0 损失**；5 单测 + probe 召回佐证 |
+| **v1 TTFT 可观测**（Phase R 回填 `RequestMetrics`） | 每请求 TTFT/prefill 可读（v1 原本恒 None） |
 
 详见 [`docs/VLLM_PATCH_INVENTORY.md`](docs/VLLM_PATCH_INVENTORY.md) 与 [`docs/VLLM_EDITABLE_SETUP.md`](docs/VLLM_EDITABLE_SETUP.md)。
 区别于同实验室 Continuum（pin 工具调用暂停）—— Mimir 在任务边界主动回收 + per-block pin + CoW 记账 + fp8 容错。
@@ -100,7 +104,7 @@ make reproduce    # 或 bash scripts/reproduce.sh --quick
 
 # 4. 全量 Benchmark（需空闲单卡）—— 最强一击 Q 262→0
 python scripts/run_phase_q_toolcall.py   # 工具调用并发 A/B（3 agent × 2 轮，~5KB 返回）
-# 或：python scripts/run_phase_m_ab.py（单 agent 10 轮 69→0）
+# 或：python scripts/run_phase_m_ab.py（单 agent 10 轮 74→0）
 ```
 
 ## 复现性说明

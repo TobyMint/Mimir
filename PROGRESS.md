@@ -2,9 +2,9 @@
 
 > **续上时先读本文件。** 记录当前阶段、已完成、进行中、阻塞、下一步、环境与 GPU 选择。
 
-**当前阶段**：Phase A-M 全部完成。vLLM v0.10.2 in-tree patch（10 文件）+ 多模型泛化 + 决定性 A/B（Mimir used=0 vs 原生 69）。92 测试通过。
+**当前阶段**：全部完成。vLLM v0.10.2 in-tree patch（7 文件 144 处 Mimir 标记）+ 多模型泛化 + 决定性 A/B（Mimir used=0 vs 原生 74）+ **创新核心 block-class（Phase BC）** + **DeepSeek V4 Pro 真实轨迹 + LLM-judge 诚实评测** + **v1 TTFT 可观测（Phase R）** + ngram speculative decoding。115 测试通过。
 
-**最后更新**：2026-06-18
+**最后更新**：2026-06-20
 
 ## 已完成 ✅
 
@@ -76,7 +76,7 @@
 
 ## 续上指南（给下一个会话）
 
-**当前完整度**：Phase A-O 全部完成。vLLM v0.10.2 拍平为普通目录 `third_party/vllm`（9-10 文件 in-tree patch），外部优化层 11 方向，两个决定性引擎级 A/B（Phase M 单 agent used 69→0；Phase O 3-agent 并发 used 14→0），多模型泛化（1.7B/4B），92 测试，一键复现。
+**当前完整度**：Phase A-Q + R + BC + DeepSeek 全部完成。vLLM v0.10.2 拍平为普通目录 `third_party/vllm`（7 文件 in-tree patch，144 处 Mimir 标记），外部优化层 11 方向，四个决定性引擎级 A/B（M 单 agent used 74→0 / O 3agent 并发 14→0 / P KV 池压力 27→0 / Q 工具调用并发 262→0），多模型泛化（1.7B/4B），**创新核心 block-class 类别感知淘汰（Phase BC，5 单测 + 真实引擎验证）**，**DeepSeek V4 Pro 真实轨迹 + LLM-judge 保真 A/B**，115 测试，一键复现。
 
 **如何启动**：`source scripts/activate_env.sh`（fresh clone 先 `bash scripts/setup_vllm_binaries.sh`）。
 
@@ -100,8 +100,8 @@
 
 **本会话完成**（Phase A-Q + 拍平 + 硬件）：
 - vLLM v0.10.2 从 submodule 拍平为普通目录 `third_party/vllm`（纯 Python patch，不重编 `_C`，`.pth`+dist-info 接入）。
-- 10 个 in-tree patch 文件：B 块级统计 / C 任务边界回收 / D CoW 记账 / E per-block pin / F fp8 降级 / G mimir 策略 / I pin_hits / J reclaim_evictable / L 自动回收 / P lifecycle-aware 分配。
-- 四个决定性引擎级 A/B（patched v1 vs 原生，used_blocks）：M 单agent 69→0 / O 3agent并发 14→0 / P KV池压力 27→0 / **Q 工具调用并发 262→0（最强一击）**。
+- 7 个 in-tree patch 文件（144 处 Mimir 标记）：B 块级统计 / C 任务边界回收 / D CoW 记账 / E per-block pin / F fp8 降级 / G mimir 策略 / I pin_hits / J reclaim_evictable / L 自动回收 / P lifecycle-aware 分配 / R v1 TTFT 回填 / **BC block-class 类别感知淘汰（创新核心）**。
+- 四个决定性引擎级 A/B（patched v1 vs 原生，used_blocks）：M 单agent 74→0 / O 3agent并发 14→0 / P KV池压力 27→0 / **Q 工具调用并发 262→0（最强一击）**。
 - 多模型泛化（Qwen3-1.7B + 4B 验证 lifecycle+CoW）。
 - 硬件抽象层（CUDA/ROCm/Ascend/Cambricon/CPU 降级链 + fp8 探测）。
 - 统一入口 `MemoryManager.run_turn_with_engine`（外部层 + 引擎层协同）。
@@ -109,6 +109,13 @@
 - 文档：技术演示 / RESULTS_SUMMARY / CONTRIBUTING / patch清单 / editable安装指南。
 - 复现：`setup_vllm_binaries.sh`（fresh clone）+ `reproduce.sh` + 2 demo GIF。
 
-**当前状态**：101 测试通过，ruff clean，git clean & synced，114+ commits，评分四维全覆盖。
+**2026-06-20 新增（夺冠冲刺）**：
+- **创新核心 Phase BC**：tool-call 感知 per-block KV 类别管理（block_id→{system,user,reasoning,tool_result}，按类别优先级淘汰）。5 单测 + 真实引擎 `evict(57) 只淘汰 reasoning` 验证。研究确认无论文做过，夺冠差异化。
+- **DeepSeek V4 Pro 真实轨迹 + LLM-judge**：前沿模型产真实 agent 轨迹作 benchmark 工作负载（native 崩 vs Mimir used=0，匹配步 TTFT −49%~−84%）；DeepSeek-flash 裁判量化压缩保真（能跑场景 10/10==10/10，full 超长崩而 Mimir 可跑）。
+- **Phase R v1 TTFT 可观测**：output_processor 回填 RequestMetrics + disable_log_stats=False。
+- **ngram speculative decoding A/B**：训练无关 decode 加速路径。
+- 全部 benchmark 在空闲卡 0 重测，数据一致可信。
+
+**当前状态**：115 测试通过，ruff clean，git clean & synced，141 commits，评分四维全覆盖 + 创新核心 + 诚实评测。
 
 **下一会话可推进（PROGRESS 续上指南已列）**：llama.cpp 后端、更重工作负载 A/B、国产硬件真实测试、长上下文生存视频。

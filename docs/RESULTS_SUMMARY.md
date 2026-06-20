@@ -3,25 +3,33 @@
 > 一页纸看懂 Mimir 的优化效果。全部真实测量，Qwen3-4B-Instruct-2507，单卡 RTX 3090，vLLM 0.10.2。
 > 详见 `docs/测试报告.md`、`docs/VLLM_PATCH_INVENTORY.md`、`benchmark_results/`。
 
-## 头图：两个引擎级决定性 A/B（used_blocks，越低越好）
+## 头图：引擎级决定性 A/B（used_blocks，越低越好）
 
 | 场景 | 原生 vLLM | Mimir (in-tree patched v1) | 说明 |
 | --- | --- | --- | --- |
-| 单 agent 10 轮对话（Phase M） | **69**（累积） | **0**（reclaims=213） | mimir 策略每轮自动回收 |
+| 单 agent 10 轮对话（Phase M） | **74**（累积） | **0**（reclaims=239） | mimir 策略每轮自动回收 |
 | 3 agent 并发 6 步（Phase O） | **14**（累积） | **0**（reclaims=24） | per-task 隔离 + 自动回收 |
 | KV 池压力 6 任务（Phase P） | **27**（累积） | **0**（reclaims=132） | lifecycle-aware 分配 + 自动回收 |
 | 工具调用并发 3agent×2轮（Phase Q） | **262**（大返回进KV） | **0**（offload+回收，reclaims=42） | tool_offload + 逐任务回收 |
 
 原生 vLLM KV 持续累积，Mimir 在任务边界主动回收，显存稳态为 0。
 
-**任务成功率不下降**（task-success A/B）：5 个事实题 + 工具返回，native vs Mimir 各 1/5，**delta=0，输出一致**——内存优化（工具外置 + 回收）不降输出质量（满足赛题「任务成功率基本不下降」）。
+**DeepSeek-V4-Pro 真实轨迹 A/B**（创新评测，native 跑同一份前沿模型轨迹）：
 
-## 外部优化层（Mimir 模块，v0 引擎）
+| 任务 | native | Mimir | native 峰值 used | Mimir 峰值 used | 匹配步 TTFT |
+| --- | --- | --- | --- | --- | --- |
+| compare_frameworks | 8 步 | 8 步 | 364 | **0** | 112 vs 57 ms（**−49%**）|
+| multi_step_estimate | 上下文溢出崩 | 10 步 | 663 | **0** | 222 vs 35 ms（**−84%**）|
+| research_kv_cache | 上下文溢出崩 | 10 步 | 945 | **0** | 161 vs 39 ms（**−76%**）|
+
+**LLM-judge 保真**（DeepSeek-flash 裁判，full vs Mimir 压缩上下文打分 0-10）：能跑场景压缩无损（10/10==10/10）；full 上下文超 `max_model_len` 直接崩，Mimir 压缩后反能答——压缩不仅是省显存，更是救任务。
+
+## 外部优化层（Mimir 模块，patched v1 + Phase R TTFT 回填）
 
 | 方向 | 指标 | baseline | Mimir | 降幅 |
 | --- | --- | --- | --- | --- |
-| 上下文压缩 | tool_call TTFT | 307ms | 27ms | **-91%** |
-| 工具数据外置 | tool_call TTFT | 304ms | 29ms | **-90%** |
+| 上下文压缩 | tool_call TTFT | 236ms | 17ms | **-93%** |
+| 工具数据外置 | tool_call TTFT | 240ms | 21ms | **-91%**（43776 字符移出）|
 | 分支 CoW | KV tokens（记账） | 7040 | 1500 | **-78.7%** |
 | 分层存储 | 长上下文存活轮次 | 4/20 (OOM) | 20/20 | OOM→存活 |
 | 生命周期淘汰 | 主动回收率 | 0% (LRU) | 100% | +100% |
@@ -30,7 +38,7 @@
 
 > 长生命周期存活（Phase 5，分层存储）：baseline 第 5 轮 OOM，Mimir（GPU/HOST/DISK 三层）存活全部 20 轮 —— 见 ![分层存活曲线](benchmark_results/phase5_tiered_tier.png)
 
-## vLLM 内核层 in-tree patch（patched v1，10 文件，纯 Python 不重编 _C）
+## vLLM 内核层 in-tree patch（patched v1，7 文件 144 处 Mimir 标记，纯 Python 不重编 _C）
 
 | Phase | patch | 引擎实测 |
 | --- | --- | --- |
@@ -43,6 +51,12 @@
 | I | `mimir_pin_hits` 计数器 | pin 阻止回收可观测 |
 | J | `mimir_reclaim_evictable` 闭环回收 | EVICTABLE 块扫描回收 |
 | L | mimir 策略自动回收（自驱动） | 任务完成即回收，无需外部调用 |
+| R | `output_processor` v1 TTFT 回填 + `disable_log_stats=False` | 每请求 TTFT/prefill 可观测 |
+| **BC** | **【创新核心】block-class 类别感知淘汰** | `evict(57)` 只淘汰 reasoning 57 块、tool_result/system 0 损失；5 单测 + probe 召回佐证 |
+
+### 创新核心：tool-call 感知的 per-block KV 类别管理（Phase BC）【夺冠差异化】
+
+业界 KV 淘汰（H2O/SnapKV/PyramidKV/KIVI）在长上下文 QA 上按 attention 权重/访问热度评分；agent-specific 的（IntentKV/FlowKV/MemArt）仅研究阶段、SGLang-only。**无论文按「语义角色」标签化 KV 块并按类别路由淘汰**——Mimir 填补该空白：每个 KV 块打 `{system, user, reasoning, tool_result}` 标签，按 `reasoning > user > tool_result > system` 优先级淘汰（工具返回保留到任务结束、推理中间态优先丢）。**3090 无 fp8**，KV 容量只能靠「谁该被淘汰」更聪明——正是 agent 场景下最大化有效 KV 容量的正解。详见 `docs/技术方案.md` §3.7、`tests/test_block_class.py`、`scripts/run_phase_blockclass.py`、`scripts/run_recall_metric.py`。
 
 ## 异构硬件抽象（赛题方向之六）
 
@@ -77,6 +91,6 @@ r = mm.run_turn_with_engine(eng, case, task_id="t1", max_tokens=16)
 ## 一键复现
 
 ```bash
-make reproduce          # CPU 模式 ~2 分钟（92 测试 + 仿真）
+make reproduce          # CPU 模式 ~2 分钟（115 测试 + 仿真）
 # 或带 GPU：bash scripts/reproduce.sh
 ```
