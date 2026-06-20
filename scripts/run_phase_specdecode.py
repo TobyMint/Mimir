@@ -113,7 +113,7 @@ extra = {"scheduling_policy": "mimir"}
 if spec:
     extra["speculative_config"] = {"method": "ngram", "num_speculative_tokens": 5,
                                    "prompt_lookup_max": 4, "prompt_lookup_min": 2}
-eng = VLLMEngineV1(EngineConfig(model=sys.argv[3], dtype="bfloat16", gpu_memory_utilization=0.55,
+eng = VLLMEngineV1(EngineConfig(model=sys.argv[3], dtype="bfloat16", gpu_memory_utilization=0.90,
     enable_prefix_caching=True, max_model_len=4096, use_v1=True, extra=extra), device=0)
 _ = eng.llm
 msgs=[{"role":"system","content":"You are a helpful assistant. Answer thoroughly and reuse the structure of the question in your answer."},

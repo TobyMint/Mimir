@@ -70,7 +70,7 @@ def run_side(model, g, util, policy):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="/data/models/Qwen3-4B-Instruct-2507")
-    ap.add_argument("--gpu-memory-util", type=float, default=0.45)
+    ap.add_argument("--gpu-memory-util", type=float, default=0.90)
     ap.add_argument("--out-dir", default="benchmark_results")
     args = ap.parse_args()
 

@@ -82,7 +82,7 @@ def main() -> int:
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="/data/models/Qwen3-4B-Instruct-2507")
-    ap.add_argument("--gpu-memory-util", type=float, default=0.55)
+    ap.add_argument("--gpu-memory-util", type=float, default=0.90)
     ap.add_argument("--max-model-len", type=int, default=8192)
     ap.add_argument("--max-tokens", type=int, default=300)
     ap.add_argument("--fidelity", default="balanced", choices=[f.value for f in Fidelity])

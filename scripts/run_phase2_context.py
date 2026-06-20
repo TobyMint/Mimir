@@ -35,7 +35,7 @@ from mimir.plots import plot_kv_mem_comparison, plot_latency_comparison
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="/data/models/Qwen3-4B-Instruct-2507")
-    ap.add_argument("--gpu-memory-util", type=float, default=0.55)
+    ap.add_argument("--gpu-memory-util", type=float, default=0.90)
     ap.add_argument("--max-tokens", type=int, default=96)
     ap.add_argument("--max-model-len", type=int, default=4096)
     ap.add_argument("--fidelity", default="balanced", choices=[f.value for f in Fidelity])

@@ -89,7 +89,7 @@ def main() -> int:
     model = "/data/models/Qwen3-4B-Instruct-2507"
     # 单 fcfs 引擎跑两路（不同 probe key 避免前缀串扰）——干净对比 LRU vs class-aware
     eng = VLLMEngineV1(EngineConfig(
-        model=model, dtype="bfloat16", gpu_memory_utilization=0.55,
+        model=model, dtype="bfloat16", gpu_memory_utilization=0.90,
         enable_prefix_caching=True, max_model_len=8192,
         extra={"scheduling_policy": "fcfs"}), device=0)
     _ = eng.llm

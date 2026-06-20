@@ -39,7 +39,7 @@ def main() -> int:
     # chat 后的块标签。fcfs 不自动回收，块标签在 chat 后保留，便于演示类别分布 + 主动淘汰。
     # block-class 打标签（cache_full_blocks 注入）与策略无关，对 fcfs/mimir 都生效。
     eng = VLLMEngineV1(EngineConfig(
-        model=model, dtype="bfloat16", gpu_memory_utilization=0.55,
+        model=model, dtype="bfloat16", gpu_memory_utilization=0.90,
         enable_prefix_caching=True, max_model_len=8192,
         extra={"scheduling_policy": "fcfs"}), device=0)
     _ = eng.llm

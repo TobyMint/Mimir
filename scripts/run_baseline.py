@@ -38,7 +38,7 @@ def model_tag(path: str) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default=DEFAULT_MODEL)
-    ap.add_argument("--gpu-memory-util", type=float, default=0.55)
+    ap.add_argument("--gpu-memory-util", type=float, default=0.90)
     ap.add_argument("--max-tokens", type=int, default=128)
     ap.add_argument("--max-model-len", type=int, default=4096)
     ap.add_argument("--out-dir", default="benchmark_results")

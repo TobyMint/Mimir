@@ -35,7 +35,7 @@ try:
     from mimir.context.compressor import Fidelity
     model, gpu, policy, offload = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]=="1"
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu
-    eng = VLLMEngineV1(EngineConfig(model=model, dtype="bfloat16", gpu_memory_utilization=0.50,
+    eng = VLLMEngineV1(EngineConfig(model=model, dtype="bfloat16", gpu_memory_utilization=0.90,
         enable_prefix_caching=True, max_model_len=4096, extra={"scheduling_policy": policy}), device=0)
     _ = eng.llm
     store = ToolDataStore() if offload else None
