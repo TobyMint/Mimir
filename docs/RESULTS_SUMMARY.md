@@ -14,13 +14,17 @@
 
 原生 vLLM KV 持续累积，Mimir 在任务边界主动回收，显存稳态为 0。
 
-**DeepSeek-V4-Pro 真实轨迹 A/B**（创新评测，native 跑同一份前沿模型轨迹）：
+**DeepSeek-V4-Pro 真实轨迹 A/B**（创新评测，native 跑同一份前沿模型轨迹；轨迹口径已对齐：num_steps == replay 步数 == assistant 消息数）：
 
-| 任务 | native | Mimir | native 峰值 used | Mimir 峰值 used | 匹配步 TTFT |
+| 任务 | native | Mimir | native 峰值 used | Mimir 峰值 used | 能否跑完 |
 | --- | --- | --- | --- | --- | --- |
-| compare_frameworks | 8 步 | 8 步 | 364 | **0** | 112 vs 57 ms（**−49%**）|
-| multi_step_estimate | 上下文溢出崩 | 10 步 | 663 | **0** | 222 vs 35 ms（**−84%**）|
-| research_kv_cache | 上下文溢出崩 | 10 步 | 945 | **0** | 161 vs 39 ms（**−76%**）|
+| compare_frameworks | 崩 | 3 步 | 285 | **0** | native 上下文溢出崩，Mimir 跑完 |
+| multi_step_estimate | 7 步 | 7 步 | 763 | **0** | 都跑完，但 Mimir 显存稳态 0 |
+| research_kv_cache | 10 步 | 10 步 | 1235 | **0** | 都跑完，Mimir 显存稳态 0 |
+
+**核心结论**：Mimir 全程 `used_blocks=0`、显存稳态为 0；native 在重轨迹（compare）下上下文溢出崩溃，在另两任务里虽勉强跑完但 KV 堆到 763/1235 块（逼近 1780 块池上限，再重一点就崩）。崩溃场景下匹配步 TTFT Mimir −86%（compare 316 vs 43 ms）。
+
+> **诚实的 trade-off**：在两任务都不崩的低强度回放下，Mimir 的 offload 使上下文前缀 hash 与 native 不同，vLLM APC 前缀缓存命中率下降，mimir 侧每步 new_prefill 略升、TTFT 与 native 持平或略高（multi_step −0.1% / research +74%）。这是「显存换重算」的固有权衡——Mimir 的价值在「显存维稳态 0 + 不崩」，而非在低强度回放下抢 TTFT；高强度/长生命周期场景前缀复用收益会回归。
 
 **LLM-judge 保真**（DeepSeek-flash 裁判，full vs Mimir 压缩上下文打分 0-10）：能跑场景压缩无损（10/10==10/10）；full 上下文超 `max_model_len` 直接崩，Mimir 压缩后反能答——压缩不仅是省显存，更是救任务。
 

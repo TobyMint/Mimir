@@ -71,7 +71,11 @@ def replay_trace(
             else:
                 prefix.append(dict(m))
 
-        task_id = f"{trace['task']}_step_{step_i}"
+        # 同一轨迹全程用同一个 task_id：replay 的语义是「逐步喂累积上下文测前缀命中」，
+        # 若每步换 task_id，mimir 策略的 Phase L 自驱动回收会在每步结束时认为「上步任务结束」
+        # 而清掉前缀 KV，导致下一步前缀不命中、new_prefill 飙升、TTFT 虚高——这对 mimir 不公平。
+        # 全程一个 task_id 让回收只在轨迹整体跑完后发生，replay 期间前缀正常累积命中。
+        task_id = f"{trace['task']}_trace"
         set_task = getattr(eng, "set_current_task", None)
         if callable(set_task):
             set_task(task_id)

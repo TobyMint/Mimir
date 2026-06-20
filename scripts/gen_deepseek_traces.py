@@ -44,8 +44,13 @@ def gen_trace(task: dict, *, model: str = "deepseek-v4-pro", tool_result_kb: int
     steps: list[dict] = []
     final_answer: str | None = None
     total_tool_bytes = 0
-
-    for step_i in range(max_steps):
+    # step = 实质轮次（空回复不计 step、不入 messages，保证 num_steps == assistant 消息数 ==
+    # replay 测量步数，三方口径一致）。attempts 限制空轮重试上限避免死循环。
+    step_i = 0
+    attempts = 0
+    max_attempts = max_steps + 6
+    while step_i < max_steps and attempts < max_attempts:
+        attempts += 1
         t0 = time.perf_counter()
         text = ds_chat(
             messages,
@@ -56,6 +61,10 @@ def gen_trace(task: dict, *, model: str = "deepseek-v4-pro", tool_result_kb: int
         dt = time.perf_counter() - t0
 
         tool_name, tool_arg, final = parse_tool_call(text)
+        # 跳过空回复轮：不 append、不计数，仅重试（口径对齐 replay 的 assistant-消息计数）
+        if not text.strip() and final is None and tool_name is None:
+            continue
+
         step_rec = {
             "step": step_i,
             "assistant_text": text,
@@ -67,6 +76,9 @@ def gen_trace(task: dict, *, model: str = "deepseek-v4-pro", tool_result_kb: int
         }
 
         if final is not None:
+            # FINAL 那步也入 messages（assistant 文本），保证 num_steps == assistant 消息数 ==
+            # replay 测量步数三方一致；否则 break 前漏 append 会让 messages 少一条 assistant。
+            messages.append({"role": "assistant", "content": text})
             final_answer = final
             steps.append(step_rec)
             break
@@ -86,13 +98,11 @@ def gen_trace(task: dict, *, model: str = "deepseek-v4-pro", tool_result_kb: int
                 {"role": "user", "content": f"[TOOL_RESULT {tool_name}]\n{tool_result}"}
             )
         else:
+            # 无工具调用也无 FINAL：把内容加入上下文继续（不再插催促提示，保持 messages 干净）
             messages.append({"role": "assistant", "content": text})
-            if step_i >= 1 and steps and steps[-1]["tool_called"] is None:
-                messages.append(
-                    {"role": "user", "content": "Please use a tool or provide [FINAL: answer]."}
-                )
 
         steps.append(step_rec)
+        step_i += 1
     else:
         final_answer = "(max steps reached without final answer)"
 
