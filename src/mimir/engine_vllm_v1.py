@@ -227,6 +227,35 @@ class VLLMEngineV1(VLLMEngine):
         outs = self.llm.chat([messages], sp, use_tqdm=False)
         return outs[0]
 
+    def chat_batch(
+        self,
+        msgs_list: list[list[dict[str, str]]],
+        *,
+        max_tokens: int = 16,
+        temperature: float = 0.0,
+        task_ids: list[str] | None = None,
+    ) -> list[Any]:
+        """真批量并发 chat：一次把 N 个请求交给 vLLM 同 batch 处理（N 请求同时 prefill/decode）。
+
+        用于并发压测：N 个 agent 同时提交，测峰值 used_blocks / 是否退化（LRU 淘汰活跃块）/ OOM。
+        不同于逐个 chat_full（同步阻塞单请求，假并发），这里 ``self.llm.chat(msgs_list)``
+        让 vLLM 内部把 N 个请求放进同一 scheduling batch 真并发处理。
+
+        ``task_ids``：每个请求的 agent task id（mimir 策略下可在请求间区分任务、触发回收）。
+        注意：block-class 标签经 ``_mimir_block_classes`` 单字段注入，批量下会被覆盖——
+        并发压测关心 used_blocks/退化而非分类标签，此限制可接受（Mimir 优势主要靠 lifecycle 回收）。
+        """
+        sp = self._make_sp(max_tokens, temperature)
+        # 批量提交前给每个请求打 task_id（mimir 调度策略据此区分任务）
+        ec = self._engine_core()
+        if task_ids and ec is not None:
+            # 批量下 _mimir_current_task 单字段只能代表"当前"——这里设为最后一个，
+            # 真正的 per-request task_id 由 core.py 在 from_engine_core_request 时取该字段。
+            # 并发压测场景足够（回收按 task_id 批量清理）。
+            ec._mimir_current_task = task_ids[-1]  # noqa: SLF001
+        outs = self.llm.chat(msgs_list, sp, use_tqdm=False)
+        return list(outs)
+
     def mimir_finish_task(self, task_id: str) -> int:
         """任务结束：调 block_pool.mimir_finish_task 主动回收该任务 KV。返回回收块数。"""
         bp = self.mimir_block_pool()

@@ -34,7 +34,7 @@ try:
     model, gpu, util, policy = sys.argv[1], sys.argv[2], float(sys.argv[3]), sys.argv[4]
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu
     eng = VLLMEngineV1(EngineConfig(model=model, dtype="bfloat16", gpu_memory_utilization=util,
-        enable_prefix_caching=True, max_model_len=4096, extra={"scheduling_policy": policy}), device=0)
+        enable_prefix_caching=True, max_model_len=8192, extra={"scheduling_policy": policy}), device=0)
     _ = eng.llm
     bp = eng.mimir_block_pool()
     total = bp.num_gpu_blocks if bp else 0

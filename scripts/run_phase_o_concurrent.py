@@ -85,7 +85,7 @@ def main() -> int:
     ap.add_argument("--model", default="/data/models/Qwen3-4B-Instruct-2507")
     ap.add_argument("--gpu-memory-util", type=float, default=0.90)
     ap.add_argument("--max-tokens", type=int, default=14)
-    ap.add_argument("--max-model-len", type=int, default=2048)
+    ap.add_argument("--max-model-len", type=int, default=8192)
     ap.add_argument("--out-dir", default="benchmark_results")
     args = ap.parse_args()
 
