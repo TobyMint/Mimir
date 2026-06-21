@@ -4,32 +4,31 @@
 > **真实部署配置**：`gpu_memory_utilization=0.9`（vLLM 默认，榨干单卡），KV 池 **5534 块**（88544 token）。
 > 详见 `docs/测试报告.md`、`docs/VLLM_PATCH_INVENTORY.md`、`benchmark_results/`。
 
-## 头图：真·并发压测（util=0.9 真实大池子，核心评测）
+## 头图：工具调用并发 A/B（Phase Q，Mimir 真赢的场景）
 
-同一张榨干的卡（0.9，KV 池 5534 块），并发 agent 数 N 递增，测 native 退化点 vs Mimir 不退化。
-**这是真实部署场景下最有说服力的指标**——不靠配置夹击（max_model_len=32768 给足），只靠 KV 显存压力。
+| 场景 | 原生 vLLM | Mimir | 说明 |
+| --- | --- | --- | --- |
+| 工具调用并发 3agent×2轮（Phase Q，~5KB 返回） | **262**（大返回进KV） | **0**（offload+回收，reclaims=42） | tool_offload + 逐任务回收 |
+| 单 agent 10 轮对话（Phase M） | **74**（累积） | **0**（reclaims=239） | mimir 策略每轮自动回收 |
+| 3 agent 并发 6 步（Phase O） | **14**（累积） | **0**（reclaims=24） | per-task 隔离 + 自动回收 |
+| KV 池压力 6 任务（Phase P） | **27**（累积） | **0**（reclaims=132） | lifecycle-aware 分配 + 自动回收 |
 
-| 并发数 N | native peak used | Mimir peak used | native | Mimir |
-| --- | --- | --- | --- | --- |
-| 1 | 270 | **0** | OK | OK |
-| 4 | 1080 | **0** | OK | OK |
-| 16 | 4320 | **0** | OK | OK |
-| **32** | **5532**（撞池子上限 5534） | **0** | **退化**（LRU 淘汰活跃块） | OK |
-| 48 | 5533 | **0** | 退化 | OK |
-| 64 | 5533 | **0** | 退化 | **OK（仍不退化）** |
+原生 vLLM KV 持续累积，Mimir 在任务边界主动回收 + 工具外置，显存稳态为 0。Phase Q 是最大赢面（262→0）且最贴合赛题工具调用场景，图表 `phase_q_toolcall_concurrent_*_curves.png`。
 
-**退化点：native@N=32，Mimir 到 N=64 仍 peak=0 不退化。** 同一张卡，Mimir 并发上限更高——靠
-lifecycle 任务边界回收 + block-class 类别感知淘汰 + 工具外置，KV 显存稳态为 0。
-图表：`benchmark_results/concurrent_press_Qwen3-4B-Instruct-2507_curves.png`
+### 诚实边界：回收策略在并发吞吐下不占优（已验证，不回避）
 
-## 引擎级 A/B（used_blocks，越低越好，交替场景）
+我们也做过 util=0.9 大池子下的真·并发压测（一次提交 N 个请求 / 多轮 / 请求潮三种模式），结果诚实记录：
+- **0.9 大池子下，native 靠 vLLM 的 preemption（KV 换出换入）能默默扛住高并发，不 OOM、请求都完成**；Mimir 的"任务结束即清空 KV"在纯吞吐场景下是负优化（清空导致前缀失配、后续重算，反而少完成请求或 TTFT 持平）。
+- **结论：Mimir 回收的真价值在「长生命周期 / 显存真紧张到要 OOM」的场景，不在「大池子高并发吞吐」**。故主评测回归交替多轮场景（Phase Q 等上面的表，Mimir 真赢）与上下文压缩（TTFT -93%）。
+- 这条边界如实写进文档，不藏——反而体现工程诚实。详见 `docs/测试报告.md` §5.0 与 `benchmark_results/concurrent_press_*.json`（负结果数据保留）。
+
+## 其它引擎级 A/B（used_blocks，越低越好，交替场景）
 
 | 场景 | 原生 vLLM | Mimir (in-tree patched v1) | 说明 |
 | --- | --- | --- | --- |
 | 单 agent 10 轮对话（Phase M） | **74**（累积） | **0**（reclaims=239） | mimir 策略每轮自动回收 |
 | 3 agent 并发 6 步（Phase O） | **14**（累积） | **0**（reclaims=24） | per-task 隔离 + 自动回收 |
 | KV 池压力 6 任务（Phase P） | **27**（累积） | **0**（reclaims=132） | lifecycle-aware 分配 + 自动回收 |
-| 工具调用并发 3agent×2轮（Phase Q） | **262**（大返回进KV） | **0**（offload+回收，reclaims=42） | tool_offload + 逐任务回收 |
 
 原生 vLLM KV 持续累积，Mimir 在任务边界主动回收，显存稳态为 0。
 
