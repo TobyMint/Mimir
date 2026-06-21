@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mimir.gpu import pick_least_busy_gpu  # noqa: E402
 
 CHILD = r"""
-import os, json, sys
+import os, json, sys, time
 sys.path.insert(0, os.getcwd())
 model, gpu, util, mlen, mtok, policy, N = (
     sys.argv[1], sys.argv[2], float(sys.argv[3]), int(sys.argv[4]),
@@ -37,6 +37,7 @@ model, gpu, util, mlen, mtok, policy, N = (
 os.environ["CUDA_VISIBLE_DEVICES"] = gpu
 from mimir.engine_vllm import EngineConfig
 from mimir.engine_vllm_v1 import VLLMEngineV1
+from benchmarks.harness import _req_metrics
 eng = VLLMEngineV1(EngineConfig(
     model=model, dtype="bfloat16", gpu_memory_utilization=util,
     enable_prefix_caching=True, max_model_len=mlen,
@@ -45,15 +46,14 @@ _ = eng.llm
 bp = eng.mimir_block_pool()
 total_blocks = bp.num_gpu_blocks
 
-# 构造 N 个异质 agent 请求：不同 system + 含工具结果的长上下文，模拟真实并发 agent
+# 构造 N 个异质 agent 请求：每个带较长工具结果，撑大单请求 KV。
+# ~3500 token/请求(≈220 块)，池子 5534 块下 native 在 N≈20 撞墙。
 SYS = [
     "You are agent {}, a research analyst. Answer briefly about your topic.",
     "You are agent {}, a code reviewer. Answer briefly about your topic.",
     "You are agent {}, a data scientist. Answer briefly about your topic.",
     "You are agent {}, a technical writer. Answer briefly about your topic.",
 ]
-# 每个请求带一段较长的工具结果,撑大单请求 KV(模拟 agent 累积上下文)。
-# ~3500 token/请求(≈220 块),池子 5534 块下 native 在 N≈20 撞墙——合理压测区间。
 TOOL_PAYLOAD = "[TOOL_RESULT search]\n" + " ".join(
     f"distinct_fact_{i} value_{i} payload detail." for i in range(320))
 
@@ -66,35 +66,49 @@ for i in range(N):
     task_ids.append(f"agent_{i}")
 
 pre_used = eng.mimir_stats().get("used_blocks", 0) or 0
-degraded = False
 oom = False
 err = ""
+t_start = time.perf_counter()
 try:
     outs = eng.chat_batch(msgs_list, max_tokens=mtok, task_ids=task_ids)
+    wall = time.perf_counter() - t_start
     n_ok = sum(1 for o in outs if o and o.outputs)
+    # 逐请求 TTFT（服务指标：首字延迟）
+    ttfts = []
+    for o in outs:
+        if o:
+            ttft = _req_metrics(o).get("ttft_ms")
+            if ttft is not None:
+                ttfts.append(ttft)
 except Exception as e:
+    wall = time.perf_counter() - t_start
     n_ok = 0
+    ttfts = []
     err = str(e)[:200]
     msg_lower = err.lower()
     if "out of memory" in msg_lower or "oom" in msg_lower or "no available memory" in msg_lower:
         oom = True
-    else:
-        degraded = True
 
 st = eng.mimir_stats()
 post_used = st.get("used_blocks", 0) or 0
 peak_used = max(pre_used, post_used)
-# 退化判定：峰值达池子 90% 或有请求失败但未 OOM
-THRESH = int(total_blocks * 0.9)
-if not oom and not degraded:
-    if peak_used >= THRESH or n_ok < N:
-        degraded = True
 reclaims = st.get("mimir_lifecycle_reclaims", 0)
+
+# 服务维度判定（回答评审"native 撞墙也能跑完"的质疑）：
+# - svc_fail: 有请求没完成(n_ok<N)或 OOM —— 真失败，不靠内部指标
+# - svc_degraded: 全完成但 TTFT 暴涨(>2x N=1 基线或单请求 >5s)—— 服务退化
+avg_ttft = round(sum(ttfts)/len(ttfts), 1) if ttfts else None
+max_ttft = round(max(ttfts), 1) if ttfts else None
+throughput = round(n_ok / wall, 2) if wall > 0 else None  # req/s
+svc_fail = (n_ok < N) or oom
+svc_degraded = (not svc_fail) and max_ttft is not None and max_ttft > 5000
 
 print("RESULT_JSON:" + json.dumps({
     "policy": policy, "N": N, "total_blocks": total_blocks,
     "pre_used": pre_used, "post_used": post_used, "peak_used": peak_used,
-    "n_ok": n_ok, "degraded": degraded, "oom": oom, "error": err,
+    "n_ok": n_ok, "svc_fail": svc_fail, "svc_degraded": svc_degraded, "oom": oom,
+    "error": err, "wall_s": round(wall, 2),
+    "avg_ttft_ms": avg_ttft, "max_ttft_ms": max_ttft, "throughput_req_s": throughput,
     "lifecycle_reclaims": reclaims,
 }))
 """
@@ -109,7 +123,7 @@ def run_side(model, g, util, mlen, mtok, policy, N):
     for line in r.stdout.splitlines():
         if line.startswith("RESULT_JSON:"):
             return json.loads(line[12:])
-    return {"policy": policy, "N": N, "oom": True, "degraded": True,
+    return {"policy": policy, "N": N, "oom": True, "svc_fail": True, "svc_degraded": True,
             "n_ok": 0, "peak_used": None, "error": (r.stderr[-300:] or "no RESULT_JSON").replace("\r", "")}
 
 
@@ -119,7 +133,7 @@ def main() -> int:
     ap.add_argument("--gpu-memory-util", type=float, default=0.90)
     ap.add_argument("--max-model-len", type=int, default=32768)
     ap.add_argument("--max-tokens", type=int, default=16)
-    ap.add_argument("--concurrency", default="1,2,4,8,16,32", help="并发数序列")
+    ap.add_argument("--concurrency", default="1,4,16,32,48,64,96", help="并发数序列")
     ap.add_argument("--out-dir", default="benchmark_results")
     args = ap.parse_args()
 
@@ -138,19 +152,23 @@ def main() -> int:
             r = run_side(args.model, g, args.gpu_memory_util, args.max_model_len,
                          args.max_tokens, policy, N)
             results[label].append(r)
-            tag = "OOM" if r.get("oom") else ("DEGRADED" if r.get("degraded") else "OK")
-            print(f"  N={N:>3}: peak_used={r.get('peak_used')!s} n_ok={r.get('n_ok')}/{N} "
-                  f"reclaims={r.get('lifecycle_reclaims',0)} [{tag}]", flush=True)
+            tag = "FAIL" if r.get("svc_fail") else ("SLOW" if r.get("svc_degraded") else "OK")
+            print(f"  N={N:>3}: n_ok={r.get('n_ok')}/{N} avg_ttft={r.get('avg_ttft_ms')!s}ms "
+                  f"wall={r.get('wall_s')}s tput={r.get('throughput_req_s')} peak={r.get('peak_used')!s} [{tag}]", flush=True)
 
-    # 找退化点：第一个 degraded 或 oom 的 N
-    def degrade_point(rows):
+    # 服务维度的退化/失败点（用服务指标说话，不靠内部 used_blocks）
+    def fail_point(rows):
         for r in rows:
-            if r.get("oom") or r.get("degraded"):
+            if r.get("svc_fail") or r.get("oom"):
                 return r.get("N")
         return None
-    n_deg = degrade_point(results["native"])
-    m_deg = degrade_point(results["mimir"])
-    # total_blocks 从任一成功的行取
+    def slow_point(rows):
+        for r in rows:
+            if r.get("svc_degraded"):
+                return r.get("N")
+        return None
+    n_fail, m_fail = fail_point(results["native"]), fail_point(results["mimir"])
+    n_slow, m_slow = slow_point(results["native"]), slow_point(results["mimir"])
     total_blocks = next((r["total_blocks"] for r in results["native"] + results["mimir"]
                          if r.get("total_blocks")), None)
 
@@ -160,22 +178,28 @@ def main() -> int:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(figsize=(9.5, 4.8))
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9.5, 7), sharex=True)
+        # 上：n_ok（服务完成数）—— 失败就看这条掉
         for label, color, marker in [("native", "r", "x"), ("mimir", "g", "^")]:
-            xs = [r["N"] for r in results[label] if r.get("peak_used") is not None]
-            ys = [r["peak_used"] for r in results[label] if r.get("peak_used") is not None]
-            ax.plot(xs, ys, f"{color}{marker}-", label=f"{label} (fcfs)" if label == "native" else "Mimir (reclaim+offload)")
-        if total_blocks:
-            ax.axhline(total_blocks, color="gray", linestyle="--", alpha=0.6, label=f"KV pool cap ({total_blocks})")
-            ax.axhline(int(total_blocks * 0.9), color="orange", linestyle=":", alpha=0.5, label="90% degrade threshold")
-        if n_deg:
-            ax.axvline(n_deg, color="red", linestyle=":", alpha=0.4)
-            ax.text(n_deg, 0.5, f"native degrades\n@N={n_deg}", color="red", fontsize=7,
-                    va="bottom", transform=ax.get_xaxis_transform())
-        ax.set_xlabel("concurrent agents (N)")
-        ax.set_ylabel("peak used KV blocks")
-        ax.set_title(f"Concurrent pressure (util={args.gpu_memory_util}, {Path(args.model).name})")
-        ax.legend(fontsize=8, loc="upper left")
+            xs = [r["N"] for r in results[label]]
+            ys = [r.get("n_ok", 0) for r in results[label]]
+            ax1.plot(xs, ys, f"{color}{marker}-", label="native (fcfs)" if label == "native" else "Mimir")
+        ax1.set_ylabel("completed requests (n_ok)")
+        ax1.set_title(f"Concurrent pressure — service metrics (util={args.gpu_memory_util}, {Path(args.model).name})")
+        ax1.legend(fontsize=8, loc="upper left")
+        # 下：avg TTFT（服务延迟）—— 退化看这条涨
+        for label, color, marker in [("native", "r", "x"), ("mimir", "g", "^")]:
+            xs = [r["N"] for r in results[label] if r.get("avg_ttft_ms") is not None]
+            ys = [r["avg_ttft_ms"] for r in results[label] if r.get("avg_ttft_ms") is not None]
+            ax2.plot(xs, ys, f"{color}{marker}-", label="native (fcfs)" if label == "native" else "Mimir")
+        ax2.set_xlabel("concurrent agents (N)")
+        ax2.set_ylabel("avg TTFT (ms)")
+        ax2.set_yscale("log")
+        ax2.legend(fontsize=8, loc="upper left")
+        if n_fail:
+            ax1.axvline(n_fail, color="red", linestyle=":", alpha=0.5)
+            ax1.text(n_fail, 0.3, f"native fails\n@N={n_fail}", color="red", fontsize=7,
+                     va="bottom", transform=ax1.get_xaxis_transform())
         fig.tight_layout()
         fig.savefig(png_name, dpi=140)
         plt.close(fig)
@@ -186,14 +210,16 @@ def main() -> int:
     summary = {
         "model": Path(args.model).name, "util": args.gpu_memory_util,
         "max_model_len": args.max_model_len, "total_blocks": total_blocks,
-        "native_degrade_at": n_deg, "mimir_degrade_at": m_deg,
+        "native_fail_at": n_fail, "mimir_fail_at": m_fail,
+        "native_slow_at": n_slow, "mimir_slow_at": m_slow,
         "native": results["native"], "mimir": results["mimir"],
-        "headline": (f"native 退化点 N={n_deg}, Mimir 退化点 N={m_deg}"
-                     f"{'（Mimir 在更高并发仍不退化）' if m_deg is None or (n_deg and m_deg and m_deg > n_deg) else ''}"),
+        "headline": (f"native 服务失败点 N={n_fail}（退化点 N={n_slow}）；"
+                     f"Mimir 失败点 N={m_fail}（退化点 N={m_slow}）"),
     }
     jp = out / f"concurrent_press_{Path(args.model).name}.json"
     jp.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n退化点: native@N={n_deg}  Mimir@N={m_deg}")
+    print(f"\n服务失败点: native@N={n_fail}  Mimir@N={m_fail}")
+    print(f"服务退化点: native@N={n_slow}  Mimir@N={m_slow}")
     print(f"JSON: {jp}")
     print("CONCURRENT_PRESS_OK")
     return 0
