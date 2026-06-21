@@ -256,46 +256,6 @@ class VLLMEngineV1(VLLMEngine):
         outs = self.llm.chat(msgs_list, sp, use_tqdm=False)
         return list(outs)
 
-    def mimir_finish_task(self, task_id: str) -> int:
-        """任务结束：调 block_pool.mimir_finish_task 主动回收该任务 KV。返回回收块数。"""
-        bp = self.mimir_block_pool()
-        if bp is None:
-            return 0
-        fn = getattr(bp, "mimir_finish_task", None)
-        if callable(fn):
-            try:
-                return int(fn(task_id))
-            except Exception:
-                return 0
-        return 0
-
-    def mimir_reclaim_evictable(self) -> int:
-        """Phase J：主动回收所有 EVICTABLE（已结束任务残留）块。返回回收数。"""
-        bp = self.mimir_block_pool()
-        if bp is None:
-            return 0
-        fn = getattr(bp, "mimir_reclaim_evictable", None)
-        if callable(fn):
-            try:
-                return int(fn())
-            except Exception:
-                return 0
-        return 0
-
-    def mimir_pin_task_blocks(self, task_id: str) -> int:
-        """pin 某任务当前拥有的块（Phase E）。返回 pin 数。"""
-        bp = self.mimir_block_pool()
-        if bp is None:
-            return 0
-        get_ids = getattr(bp, "mimir_get_task_block_ids", None)
-        pin = getattr(bp, "mimir_pin_blocks", None)
-        if callable(get_ids) and callable(pin):
-            try:
-                return int(pin(get_ids(task_id)))
-            except Exception:
-                return 0
-        return 0
-
     def mimir_stats(self) -> dict[str, Any]:
         """读取 scheduler 上由 in-tree patch 暴露的 Mimir 统计（Phase B）。"""
         sched = self.mimir_scheduler()

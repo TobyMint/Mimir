@@ -229,7 +229,7 @@ def run_agent_loop(
     import time
 
     for step_i in range(max_steps):
-        # 设当前步骤的 task_id（mimir 策略下会自动回收上一步的 KV）
+        # 设当前步骤的 task_id（仅供 block-class 标签注入与 CoW 记账，不触发回收）
         task_id = f"{task['name']}_step_{step_i}"
         set_task = getattr(eng, "set_current_task", None)
         if callable(set_task):

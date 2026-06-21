@@ -1,10 +1,12 @@
 # ruff: noqa: E501
 """Phase K：多模型规模泛化验证（直击「适配不同模型规模」20 分）。
 
-在 Qwen3-1.7B / Qwen3-4B-Instruct-2507 / Qwen3-8B 上跑相同的 Mimir 生命周期+CoW 验证，
+在 Qwen3-1.7B / Qwen3-4B-Instruct-2507 / Qwen3-8B 上跑相同的 Mimir CoW 验证，
 证明 vLLM in-tree patch 跨模型规模生效：
-- 生命周期Reclaim：跑 2 Task，调 mimir_finish_task，看 used_blocks 下降
 - CoW Reuse：跑 2 分支共享前缀，看 mimir_cow_reuses 增长
+- block-class 标签：跑一条消息，确认 mimir_block_class 标签分布合理
+
+（原 lifecycle 主动回收验证已随回收机制删除——其 used_blocks→0 系偷换概念。）
 
 输出：benchmark_results/phase_k_multimodel.json
 
@@ -42,32 +44,24 @@ cfg = EngineConfig(model=path, dtype="bfloat16", gpu_memory_utilization=0.45,
                    enable_prefix_caching=True, max_model_len=2048)
 eng = VLLMEngineV1(cfg, device=0); _ = eng.llm
 SYS = "You are a helpful agent. Answer briefly about KV cache."
-# lifecycle
-eng.set_current_task("t1")
-eng.chat([{"role":"system","content":SYS},{"role":"user","content":"What is prefix caching?"}], max_tokens=max_tokens)
-eng.set_current_task("t2")
-eng.chat([{"role":"system","content":SYS},{"role":"user","content":"What is KV reuse?"}], max_tokens=max_tokens)
-pre = eng.mimir_stats()
-r1 = eng.mimir_finish_task("t1"); r2 = eng.mimir_finish_task("t2")
-post = eng.mimir_stats()
 # CoW (same engine: branch B reuses A prefix)
 eng.set_current_task("brA")
 eng.chat([{"role":"system","content":SYS},{"role":"user","content":"Estimate KV for 7B 32k. Approach A: decompose."}], max_tokens=max_tokens)
 eng.set_current_task("brB")
 eng.chat([{"role":"system","content":SYS},{"role":"user","content":"Estimate KV for 7B 32k. Approach B: analogy."}], max_tokens=max_tokens)
-cow = eng.mimir_stats().get("mimir_cow_reuses", 0)
+st = eng.mimir_stats()
+cow = st.get("mimir_cow_reuses", 0)
 print("RESULT_JSON:" + json.dumps({
-    "model": name, "total_blocks": pre.get("total_blocks"),
-    "lifecycle_used_before": pre.get("used_blocks"),
-    "lifecycle_used_after": post.get("used_blocks"),
-    "lifecycle_reclaims": r1 + r2, "cow_reuses": cow,
-    "patch_works": (r1 + r2) > 0 or cow > 0,
+    "model": name, "total_blocks": st.get("total_blocks"),
+    "cow_reuses": cow,
+    "mimir_block_class": st.get("mimir_block_class", {}),
+    "patch_works": cow > 0,
 }))
 """
 
 
 def verify_model(name: str, path: str, g, max_tokens: int) -> dict:
-    """在子进程中跑（完全释放Memory），避免多模型叠加 OOM。"""
+    """在子进程中跑（完全释放 Memory），避免多模型叠加 OOM。"""
     import subprocess
 
     print(f"\n=== {name} ===", flush=True)
@@ -83,8 +77,8 @@ def verify_model(name: str, path: str, g, max_tokens: int) -> dict:
         if line.startswith("RESULT_JSON:"):
             res = json.loads(line[len("RESULT_JSON:") :])
             print(
-                f"  lifecycle: used {res['lifecycle_used_before']} -> {res['lifecycle_used_after']}, "
-                f"reclaims={res['lifecycle_reclaims']}, CoW={res['cow_reuses']}",
+                f"  CoW reuses={res['cow_reuses']}, "
+                f"block_class={res.get('mimir_block_class', {}).get('block_class_counts', {})}",
                 flush=True,
             )
             return res

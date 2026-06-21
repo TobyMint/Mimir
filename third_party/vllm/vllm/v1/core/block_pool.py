@@ -72,16 +72,13 @@ class BlockPool:
         self.enable_kv_cache_events = enable_kv_cache_events
         self.kv_event_queue: list[KVCacheEvent] = []
 
-        # ---- Mimir in-tree patch: 生命周期/任务边界感知（Phase C）------------- #
-        # 追踪每个块归属的 agent 任务 + 生命周期态。vLLM 原生只有 LRU 淘汰（被动、
-        # 按访问序），不感知「任务已结束可立即回收」。Mimir 在 cache_full_blocks
-        # 时记录块→任务归属，在 mimir_finish_task 时主动回收（ref_cnt==0 且非 PINNED）。
-        self.mimir_block_task: dict[int, object] = {}      # block_id -> task_id
-        self.mimir_block_lifecycle: dict[int, str] = {}    # block_id -> "active"|"evictable"|"pinned"
-        self.mimir_lifecycle_reclaims: int = 0             # 主动回收计数（导出到 get_mimir_stats）
-        self.mimir_used_blocks: int = 0                    # 由 cache_full_blocks 增、mimir_finish_task 减
+        # ---- Mimir in-tree patch: 块级观测记账（非回收，零热路径开销）----------- #
+        # 仅维护「块→任务」「块→类别」记账表与被动计数器，供 CoW 复用记账 / block-class
+        # 淘汰 / 观测使用。注意：早期版本的 "lifecycle 主动回收"（mimir_finish_task /
+        # mimir_reclaim_evictable / pin）已移除——其 used_blocks→0 是任务结束后的瞬时计数，
+        # 推理时该占仍占、回收重算反而拖慢服务，属偷换概念，已彻底删除。
+        self.mimir_block_task: dict[int, object] = {}      # block_id -> task_id（CoW 记账用）
         self.mimir_cow_reuses: int = 0                     # 跨分支 CoW 复用计数（Phase D）
-        self.mimir_pin_hits: int = 0                       # pin 生效计数（Phase E，pin 阻止淘汰时增）
         # ---- Mimir innovation patch: 块语义类别（block-class）感知管理 ----------- #
         # 给每个被 cache 的 KV 块打语义类别标签（block_id -> class），由 Mimir adapter 根据
         # prompt 里消息角色边界（system / user / assistant reasoning / tool_result）推断并经
@@ -94,7 +91,6 @@ class BlockPool:
             "reasoning": 0, "user": 0, "tool_result": 0, "system": 0, "unknown": 0,
         }
         # ---- Mimir innovation patch end --------------------------------------- #
-
         # ---- Mimir patch end ----------------------------------------------- #
 
     def get_cached_block(
@@ -169,13 +165,8 @@ class BlockPool:
                 blk.block_id] = blk
             if new_hashes is not None:
                 new_hashes.append(maybe_convert_block_hash(block_hash))
-            # ---- Mimir patch (Phase C/D): 记录块→任务归属 + used 计数 ----
-            if blk.block_id not in self.mimir_block_task:
-                self.mimir_used_blocks += 1  # 新占用块
-            self.mimir_block_task[blk.block_id] = getattr(
-                request, "mimir_task_id", None)
-            if blk.block_id not in self.mimir_block_lifecycle:
-                self.mimir_block_lifecycle[blk.block_id] = "active"
+            # ---- Mimir patch: 记录块→任务归属（CoW 记账用，非回收）----
+            self.mimir_block_task[blk.block_id] = getattr(request, "mimir_task_id", None)
             # ---- Mimir innovation (block-class): 给块打语义类别标签 ----
             # 该块在请求块序列中的绝对索引 = num_cached_blocks（前缀复用部分）+ i。
             # Mimir adapter 预算好 request.mimir_block_classes（per-block-index 类别）。
@@ -222,18 +213,12 @@ class BlockPool:
         Returns:
             A list of new block.
         """
-        # ---- Mimir patch (Phase P): 分配前主动回收 EVICTABLE 块 ----
-        # vLLM 默认仅在容量不足时由 LRU 被动淘汰 free_block_queue 里的缓存块。Mimir 先把
-        # 已结束任务标记为 EVICTABLE 的块物理释放（reset_hash + 回 free 队列），让真正需要淘汰时
-        # 优先腾出这些「任务残留」而非活跃任务的 KV。这是 lifecycle 感知淘汰接入了真实分配路径。
-        try:
-            self.mimir_reclaim_evictable()
-        except Exception:
-            pass
-        # ---- Mimir patch end ----
+        # ---- Mimir patch (Phase P) 已移除：原「分配前无条件 reclaim_evictable」在热路径 ----
+        # 无条件扫描，且属已废弃的 lifecycle 主动回收机制（推理时该占仍占、回收重算拖慢
+        # 服务，used_blocks→0 系偷换概念），整段删除。保留下方 block-class 容量感知淘汰。
         # ---- Mimir innovation (block-class): 容量紧张时按类别优先淘汰 ----
         # 若空闲块不足以满足本次分配，按「reasoning > user > tool_result > system」优先级
-        # 主动淘汰低价值类别的缓存块（而非 LRU 盲选）。这是 block-class 感知淘汰接入分配路径。
+        # 主动淘汰低价值类别的缓存块（而非 LRU 盲选）。仅在容量不足时触发，热路径零开销。
         if num_blocks > self.get_num_free_blocks():
             try:
                 self.mimir_class_aware_evict(num_blocks - self.get_num_free_blocks())
@@ -296,120 +281,9 @@ class BlockPool:
                              medium=MEDIUM_GPU))
         return True
 
-    # ---- Mimir in-tree patch: 任务边界主动回收 + per-block pin（Phase C/E）------- #
-    def mimir_finish_task(self, task_id: object) -> int:
-        """任务结束：主动回收该任务所有 EVICTABLE/ACTIVE 块（非 PINNED, ref_cnt==0）。
-
-        vLLM 原生 LRU 只在容量压力下被动淘汰，不感知「任务已结束」。Mimir 在
-        agent 任务边界调用此方法，立即把已完成任务的残留 KV 标记并物理释放，
-        把显存让给其他并发任务（动态资源重分配）。
-
-        返回回收的块数。
-        """
-        if task_id is None:
-            return 0
-        reclaimed = 0
-        # 收集归该任务的所有块 id
-        task_block_ids = [
-            bid for bid, tid in self.mimir_block_task.items() if tid == task_id
-        ]
-        for bid in task_block_ids:
-            lc = self.mimir_block_lifecycle.get(bid, "active")
-            if lc == "pinned":
-                # PINNED 块不回收（system 前缀等，Phase E）；记为一次 pin 命中（pin 阻止了回收）
-                self.mimir_block_lifecycle[bid] = "evictable"  # 标记可回收，留给后续压力淘汰
-                self.mimir_pin_hits += 1
-                continue
-            block = self.blocks[bid]
-            # 仅回收无引用的块（mirror get_new_blocks 的 ref_cnt==0 guard）
-            if block.ref_cnt != 0:
-                self.mimir_block_lifecycle[bid] = "evictable"  # 仍被引用，标记可回收
-                continue
-            # 物理释放：重置 hash、移出 cache、放回 free 队列
-            bh = block.block_hash
-            if bh is not None:
-                block.reset_hash()
-                blocks_by_id = self.cached_block_hash_to_block.get(bh)
-                if blocks_by_id is not None:
-                    blocks_by_id.pop(bid, None)
-                    if len(blocks_by_id) == 0:
-                        del self.cached_block_hash_to_block[bh]
-                if self.enable_kv_cache_events:
-                    self.kv_event_queue.append(
-                        BlockRemoved(block_hashes=[
-                            maybe_convert_block_hash(get_block_hash(bh))],
-                            medium=MEDIUM_GPU))
-            # 放回 free 队列（若不在）
-            if not block.is_null:
-                self.free_block_queue.append(block)
-            self.mimir_block_task.pop(bid, None)
-            self.mimir_block_lifecycle.pop(bid, None)
-            self.mimir_block_class.pop(bid, None)  # innovation: 清类别标签
-            self.mimir_used_blocks = max(0, self.mimir_used_blocks - 1)
-            reclaimed += 1
-        self.mimir_lifecycle_reclaims += reclaimed
-        return reclaimed
-
-    def mimir_pin_blocks(self, block_ids: list[int]) -> int:
-        """钉住指定块（不淘汰/不回收）。Phase E 用于 agent 暂停时 pin 前缀。"""
-        n = 0
-        for bid in block_ids:
-            if bid in self.mimir_block_lifecycle:
-                self.mimir_block_lifecycle[bid] = "pinned"
-                n += 1
-        return n
-
-    def mimir_unpin_task(self, task_id: object) -> int:
-        """取消某任务所有块的 pin，标记为 evictable。"""
-        n = 0
-        for bid, tid in self.mimir_block_task.items():
-            if tid == task_id and self.mimir_block_lifecycle.get(bid) == "pinned":
-                self.mimir_block_lifecycle[bid] = "evictable"
-                n += 1
-        return n
-
-    def mimir_get_task_block_ids(self, task_id: object) -> list[int]:
-        return [bid for bid, tid in self.mimir_block_task.items() if tid == task_id]
-
-    def mimir_reclaim_evictable(self) -> int:
-        """Phase J：主动扫描并回收所有 EVICTABLE（已结束任务残留）块。
-
-        闭环：Phase C 的 mimir_finish_task 会把仍被引用/PINNED 的块标记为
-        EVICTABLE（无法立即回收）；本方法在显存压力点被调用，把所有 EVICTABLE
-        且 ref_cnt==0 的块物理释放（reset_hash + 移出 cache + 放回 free 队列）。
-        返回回收数。
-        """
-        reclaimed = 0
-        evictable_ids = [
-            bid for bid, lc in self.mimir_block_lifecycle.items() if lc == "evictable"
-        ]
-        for bid in evictable_ids:
-            block = self.blocks[bid]
-            if block.ref_cnt != 0:
-                continue  # 仍被引用，跳过
-            bh = block.block_hash
-            if bh is not None:
-                block.reset_hash()
-                by_id = self.cached_block_hash_to_block.get(bh)
-                if by_id is not None:
-                    by_id.pop(bid, None)
-                    if len(by_id) == 0:
-                        del self.cached_block_hash_to_block[bh]
-                if self.enable_kv_cache_events:
-                    self.kv_event_queue.append(
-                        BlockRemoved(block_hashes=[
-                            maybe_convert_block_hash(get_block_hash(bh))],
-                            medium=MEDIUM_GPU))
-            if not block.is_null:
-                self.free_block_queue.append(block)
-            self.mimir_block_task.pop(bid, None)
-            self.mimir_block_lifecycle.pop(bid, None)
-            self.mimir_block_class.pop(bid, None)  # innovation: 清类别标签
-            self.mimir_used_blocks = max(0, self.mimir_used_blocks - 1)
-            reclaimed += 1
-        self.mimir_lifecycle_reclaims += reclaimed
-        return reclaimed
-    # ---- Mimir patch end ---------------------------------------------------- #
+    # ---- Mimir patch: 主动回收机制（mimir_finish_task/reclaim_evictable/pin）已删除 ----
+    # 原机制在任务边界主动回收 KV 使 used_blocks→0，但推理时该占仍占、回收重算
+    # 反而拖慢服务，used_blocks→0 系任务结束后瞬时计数偷换，已彻底删除。
 
     # ---- Mimir innovation (block-class): 类别感知主动淘汰 -------------------- #
     _MIMIR_CLASS_EVICT_PRIORITY = ("reasoning", "user", "tool_result", "system")
@@ -432,7 +306,6 @@ class BlockPool:
             candidates = [
                 bid for bid, c in self.mimir_block_class.items()
                 if c == cls
-                and self.mimir_block_lifecycle.get(bid) != "pinned"
                 and self.blocks[bid].ref_cnt == 0
                 and self.blocks[bid].block_hash is not None
             ]
@@ -457,8 +330,6 @@ class BlockPool:
                 # 不动 free_block_queue：该块仍在 free 队列里（ref_cnt==0），淘汰其 cache 即可
                 self.mimir_block_class.pop(bid, None)
                 self.mimir_block_task.pop(bid, None)
-                self.mimir_block_lifecycle.pop(bid, None)
-                self.mimir_used_blocks = max(0, self.mimir_used_blocks - 1)
                 self.mimir_class_evicts[cls] = self.mimir_class_evicts.get(cls, 0) + 1
                 evicted += 1
         return evicted

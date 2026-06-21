@@ -20,12 +20,11 @@ def _make_pool(n: int = 20) -> BlockPool:
 
 
 def _tag_blocks(bp: BlockPool, mapping: dict[int, str]) -> None:
-    """手工给指定 block_id 打类别标签 + 生命周期 + 伪造 cached hash，使其可被淘汰。"""
+    """手工给指定 block_id 打类别标签 + 任务归属 + 伪造 cached hash，使其可被淘汰。"""
     from vllm.v1.core.kv_cache_utils import make_block_hash_with_group_id
 
     for bid, cls in mapping.items():
         bp.mimir_block_class[bid] = cls
-        bp.mimir_block_lifecycle[bid] = "evictable"
         bp.mimir_block_task[bid] = "task_x"
         blk = bp.blocks[bid]
         # 伪造 block_hash（bytes）使其「在 cache 中、可被 reset_hash 淘汰」
@@ -33,7 +32,6 @@ def _tag_blocks(bp: BlockPool, mapping: dict[int, str]) -> None:
             bh = make_block_hash_with_group_id(bid.to_bytes(8, "big"), 0)
             blk.block_hash = bh
             bp.cached_block_hash_to_block[bh][bid] = blk
-        bp.mimir_used_blocks += 1
 
 
 def test_class_aware_evict_prefers_reasoning():
@@ -65,17 +63,16 @@ def test_class_aware_evict_priority_order():
     assert ev["system"] == 0, "system 应最后才淘汰，此处必须存活"
 
 
-def test_class_aware_evict_skips_pinned():
+def test_class_aware_evict_skips_referenced():
+    """ref_cnt != 0 的在用块不可淘汰（mirror get_new_blocks 的 ref_cnt==0 守卫）。"""
     bp = _make_pool(20)
     _tag_blocks(bp, {1: "reasoning", 2: "tool_result"})
-    # 把 reasoning 块 pin 住
-    bp.mimir_block_lifecycle[1] = "pinned"
+    # 把 reasoning 块标记为在用（ref_cnt=1）
+    bp.blocks[1].ref_cnt = 1
     n = bp.mimir_class_aware_evict(1)
     assert n == 1
-    # reasoning 被 pin 跳过，淘汰落到下一优先级（tool_result 在 reasoning 之后，
-    # 但 reasoning 候选已耗尽 -> user 无 -> tool_result）
+    # reasoning 在用被跳过，淘汰落到下一优先级（tool_result）
     ev = bp.mimir_class_stats()["class_evicts"]
-    # reasoning 被 pin 0 淘汰，tool_result 1
     assert ev["reasoning"] == 0
     assert ev["tool_result"] == 1
 

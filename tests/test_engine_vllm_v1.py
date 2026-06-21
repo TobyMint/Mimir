@@ -24,9 +24,7 @@ def _mock_llm(num_gpu_blocks: int = 100, free: int = 30):
         kv_cache_manager=kvm,
         running=[1, 2],
         waiting=[],
-        mimir_lifecycle_reclaims=5,
         mimir_cow_reuses=3,
-        mimir_pin_hits=1,
     )
     inner = SimpleNamespace(scheduler=sched)
     ec = SimpleNamespace(engine_core=inner)  # InprocClient
@@ -75,9 +73,7 @@ def test_mimir_stats_reads_scheduler_counters() -> None:
             )
             self.running = [1, 2]
             self.waiting = []
-            self.mimir_lifecycle_reclaims = 5
             self.mimir_cow_reuses = 3
-            self.mimir_pin_hits = 1
 
         def get_mimir_stats(self):
             bp = self.kv_cache_manager.block_pool
@@ -86,9 +82,7 @@ def test_mimir_stats_reads_scheduler_counters() -> None:
             return {
                 "used_blocks": used,
                 "total_blocks": total,
-                "mimir_lifecycle_reclaims": self.mimir_lifecycle_reclaims,
                 "mimir_cow_reuses": self.mimir_cow_reuses,
-                "mimir_pin_hits": self.mimir_pin_hits,
             }
 
     sched = FakeSched()
@@ -102,5 +96,4 @@ def test_mimir_stats_reads_scheduler_counters() -> None:
     st = e.mimir_stats()
     assert st["total_blocks"] == 100
     assert st["used_blocks"] == 70
-    assert st["mimir_lifecycle_reclaims"] == 5
     assert st["mimir_cow_reuses"] == 3

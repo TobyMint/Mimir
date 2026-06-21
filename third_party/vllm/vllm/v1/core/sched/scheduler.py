@@ -1167,28 +1167,8 @@ class Scheduler(SchedulerInterface):
         assert request.is_finished()
         self.kv_cache_manager.free(request)
         del self.requests[request.request_id]
-        # ---- Mimir patch (Phase L): mimir 策略下自动回收已完成任务 KV ----
-        # 当 scheduling_policy=mimir 时，请求释放后检查其所属任务是否还有未完成请求；
-        # 若无，自动调 block_pool.mimir_finish_task 回收该任务全部残留 KV（自驱动，
-        # 无需 Mimir 外部显式调用）。仅对 mimir 策略生效，不影响 fcfs/priority。
-        if self.scheduler_config.policy == "mimir":
-            try:
-                tid = getattr(request, "mimir_task_id", None)
-                if tid is not None:
-                    # 该任务是否还有未完成请求？
-                    still_running = any(
-                        getattr(r, "mimir_task_id", None) == tid
-                        and not r.is_finished()
-                        for r in self.requests.values()
-                    )
-                    if not still_running:
-                        bp = self.kv_cache_manager.block_pool
-                        fn = getattr(bp, "mimir_finish_task", None)
-                        if callable(fn):
-                            fn(tid)
-            except Exception:
-                pass
-        # ---- Mimir patch end ----
+        # ---- Mimir patch (Phase L) 已删除：原 mimir 策略下自驱动回收已完成任务 KV ----
+        # （mimir_finish_task），属已废弃的 lifecycle 主动回收，已彻底移除。
 
     def get_num_unfinished_requests(self) -> int:
         return len(self.waiting) + len(self.running)
@@ -1227,12 +1207,7 @@ class Scheduler(SchedulerInterface):
             bp = self.kv_cache_manager.block_pool
             total = bp.num_gpu_blocks
             free = bp.get_num_free_blocks()
-            # v1 free 队列也含缓存块（淘汰候选），total-free 可能负。
-            # 用 Mimir 维护的 used 计数（cache_full_blocks 标记、mimir_finish_task 减），
-            # 回退到 max(0, total-free)。
-            used = getattr(bp, "mimir_used_blocks", None)
-            if used is None:
-                used = max(0, total - free)
+            used = max(0, total - free)
             stats = {
                 "used_blocks": used,
                 "total_blocks": total,
@@ -1241,11 +1216,8 @@ class Scheduler(SchedulerInterface):
                 "num_running_reqs": len(self.running),
                 "num_waiting_reqs": len(self.waiting),
             }
-            # 附加 Mimir lifecycle/CoW 计数器（Phase C/D 注入到 block_pool，缺省 0）
-            stats["mimir_lifecycle_reclaims"] = getattr(
-                bp, "mimir_lifecycle_reclaims", 0)
+            # CoW 复用计数（Phase D，独立于已删除的回收机制）
             stats["mimir_cow_reuses"] = getattr(bp, "mimir_cow_reuses", 0)
-            stats["mimir_pin_hits"] = getattr(bp, "mimir_pin_hits", 0)
             # innovation: block-class 感知管理统计（类别块数 + 按类别淘汰数）
             cs_fn = getattr(bp, "mimir_class_stats", None)
             if callable(cs_fn):

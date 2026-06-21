@@ -58,18 +58,19 @@ def test_mock_calculator() -> None:
 
 
 class _MockEngine:
-    """Mock v1 engine for agent loop testing (no GPU)."""
+    """Mock v1 engine for agent loop testing (no GPU).
+
+    仅用于驱动 agent loop 的多步循环逻辑（解析 tool_call / 累积消息 / crash 捕获），
+    used_blocks 给单调占位值即可（不模拟回收——回收机制已删除）。
+    """
 
     def __init__(self, responses: list[str]):
         self._responses = responses
         self._idx = 0
         self._current_task = None
-        self.reclaims = 0
+        self._step = 0
 
     def set_current_task(self, task_id: str) -> None:
-        # Simulate: each new task triggers reclaim of previous task's KV
-        if self._current_task is not None:
-            self.reclaims += 1
         self._current_task = task_id
 
     def chat(self, messages, *, max_tokens=128, temperature=0.0):
@@ -78,27 +79,15 @@ class _MockEngine:
         return resp, len(resp.split())
 
     def mimir_stats(self):
-        # Simulate: used_blocks goes up for native (no reclaim), stays 0 for mimir
-        if self._current_task and "step" in self._current_task:
-            step = int(self._current_task.rsplit("step_", 1)[1])
-            # Native: accumulates; Mimir (reclaims>0): resets
-            if self.reclaims > 0:
-                used = 0  # mimir: previous step reclaimed
-            else:
-                used = (step + 1) * 5  # native: grows
-        else:
-            used = 0
-        return {"used_blocks": used, "mimir_lifecycle_reclaims": self.reclaims}
-
-    def mimir_finish_task(self, task_id: str) -> int:
-        self.reclaims += 1
-        return 1
+        # 单调占位 used（不模拟回收）；供 agent_loop 读 used_blocks 不报错
+        used = self._step * 5
+        self._step += 1
+        return {"used_blocks": used, "mimir_cow_reuses": 0}
 
     def mimir_block_pool(self):
         return SimpleNamespace(
             num_gpu_blocks=100,
             get_num_free_blocks=lambda: 100,
-            mimir_block_lifecycle={},
             mimir_block_task={},
         )
 
