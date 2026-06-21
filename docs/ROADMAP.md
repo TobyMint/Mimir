@@ -20,9 +20,11 @@
 
 ## 指标口径（固定，对应 docs/测试报告.md §4）
 
-`used_blocks`（核心，优化敏感）、`new_prefill_tokens`、`ttft_ms`、`e2e_latency_s`、`throughput_tok_per_s`、`task_success_rate`；
-`peak_gpu_mem_alloc_gib` 仅反映 vLLM 预分配固定 KV 池（≈11.6 GiB @ util=0.55），不随优化变，不作核心证据。
+`new_prefill_tokens`（核心，真实减少必需 KV）、`ttft_ms`、`used_blocks`（观测）、`e2e_latency_s`、`throughput_tok_per_s`、`task_success_rate`；
+`peak_gpu_mem_alloc_gib` 仅反映 vLLM 预分配固定 KV 池，不随优化变，不作核心证据。
 **优化前后同一硬件配置、同一模型、同一 seed。**
+
+> 注：早期 used_blocks→0（lifecycle 主动回收）已删除——系任务结束瞬时计数偷换。真信号用 new_prefill 真减 + 避免 OOM。
 
 ## 消融实验（每个特性都要进）
 

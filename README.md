@@ -2,14 +2,16 @@
 
 > Mimir 取名自北欧神话中以智慧与记忆闻名者，寓意本项目聚焦于智能体推理过程中**记忆（KV Cache / 上下文）的管理与复用**。
 >
-> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — 四个引擎级 A/B（used_blocks 74 / 14 / 27 / **262** → 0）、tool_call TTFT **-93%**、分支 CoW **-78.7%**、block-class 创新核心、DeepSeek 真实轨迹 + LLM-judge 保真、多模型泛化。
+> 📊 **结果总览（评审速读）**：[docs/RESULTS_SUMMARY.md](docs/RESULTS_SUMMARY.md) — tool_call TTFT **-93%**（上下文压缩+工具外置，真减 KV）、分支 CoW **-78.7%**、block-class 创新核心、DeepSeek 真实轨迹 + LLM-judge 保真、多模型泛化。
 >
 > 🎯 **创新核心（Phase BC）**：tool-call 感知的 per-block KV 类别管理——给 KV 块打语义类别标签（system/user/reasoning/tool_result），按类别优先级淘汰。无论文做过，是 Mimir 的夺冠差异化。详见 [技术方案 §3.7](docs/技术方案.md)。
 >
-> 🔥 **最强场景（Phase Q，工具调用并发）**：3 个 agent × 2 轮工具调用（每轮含 ~5KB 工具返回），原生 vLLM KV 累积到 **262 块**，Mimir（工具外置 + 逐任务自动回收）保持 **0 块**（reclaims=42）。
-> ![Phase Q 工具调用并发 A/B](benchmark_results/phase_q_toolcall_concurrent_Qwen3-4B-Instruct-2507_curves.png)
+> 🔥 **核心收益（工具外置，真减少必需 KV）**：工具返回的大 JSON 外置、上下文只留引用，进 KV 的 prompt token 从 **3792 → 647**（-83%），tool_call TTFT **236ms → 17ms（-93%）**——真实减少 prefill 计算量，用户可感知提速。
+> ![Agent-Loop](benchmark_results/agent_benchmark_heavy12_Qwen3-4B-Instruct-2507_curves.png)
 >
-> 🎞️ **动态演示**：[Agent-Loop GIF](benchmark_results/agent_loop_demo.gif)（native 第 2-5 步崩溃 vs Mimir 全程 used=0）｜ [Phase Q 逐轮揭示 262→0](benchmark_results/phase_q_demo.gif)
+> 🧯 **避免 OOM 崩溃**：长上下文累积下原生 vLLM 上下文溢出崩溃，Mimir 靠工具外置 + 分层存储存活（baseline 第 5 轮 OOM vs Mimir 存活 20 轮）——「能跑 vs 不能跑」，不偷换。
+>
+> 🎞️ **动态演示**：[Agent-Loop GIF](benchmark_results/agent_loop_demo.gif)（native 第 2-5 步崩溃 vs Mimir 全程跑完）
 
 <p align="center">
   <b>研究创新赛道 · 面向智能体的内存管理系统设计与实现（高校赛题）</b>
@@ -32,16 +34,15 @@ Mimir 不仅在 vLLM 之上做外部封装，更**直接 patch 了 vLLM v0.10.2 
 
 | 引擎层 patch | 真实验证 |
 | --- | --- |
-| **任务边界主动回收**（`block_pool.mimir_finish_task`） | 2 agent 任务的 10 个 KV 块 used_blocks **10→0**（vLLM LRU 做不到） |
 | **分支 CoW 复用记账**（`kv_cache_manager`） | 4 分支测得 **9 次跨分支 KV 复用**（与 BranchTree 预测一致） |
-| **per-block KV-pin**（lifecycle-bounded） | agent 3 块 in agent B 压力下 **3/3 存活** |
 | **fp8 KV 优雅降级**（arg_utils oracle） | 不支持的硬件上**降级 bf16**而非崩溃 |
-| **'mimir' 调度策略**（`SchedulerPolicy` + `MimirRequestQueue`） | `scheduling_policy="mimir"` 跑通 |
 | **【创新】block-class 类别感知淘汰**（`block_pool.mimir_class_aware_evict`） | `evict(57)` 只淘汰 reasoning 57 块、tool_result/system **0 损失**；5 单测 + probe 召回佐证 |
 | **v1 TTFT 可观测**（Phase R 回填 `RequestMetrics`） | 每请求 TTFT/prefill 可读（v1 原本恒 None） |
 
 详见 [`docs/VLLM_PATCH_INVENTORY.md`](docs/VLLM_PATCH_INVENTORY.md) 与 [`docs/VLLM_EDITABLE_SETUP.md`](docs/VLLM_EDITABLE_SETUP.md)。
-区别于同实验室 Continuum（pin 工具调用暂停）—— Mimir 在任务边界主动回收 + per-block pin + CoW 记账 + fp8 容错。
+区别于同实验室 Continuum（pin 工具调用暂停）—— Mimir 在 block-class 类别感知淘汰 + CoW 记账 + 工具外置上差异化。
+
+> 注：早期版本的「lifecycle 主动回收 / per-block pin」（used_blocks→0）已移除——其归 0 是任务结束后瞬时计数，推理时该占仍占、回收重算反而拖慢服务，系偷换概念。Mimir 的真收益在工具外置/压缩减少必需 KV、避免 OOM、block-class 创新差异化。
 
 ## 核心优化方向
 
@@ -102,9 +103,13 @@ source scripts/activate_env.sh
 # 3. 一键复现验证（CPU 模式 ~2 分钟）
 make reproduce    # 或 bash scripts/reproduce.sh --quick
 
-# 4. 全量 Benchmark（需空闲单卡）—— 最强一击 Q 262→0
-python scripts/run_phase_q_toolcall.py   # 工具调用并发 A/B（3 agent × 2 轮，~5KB 返回）
-# 或：python scripts/run_phase_m_ab.py（单 agent 10 轮 74→0）
+# 4. 全量 Benchmark（需空闲单卡）—— 真实引擎实测
+python scripts/run_phase_blockclass.py        # 创新：block-class 类别感知淘汰
+python scripts/run_recall_metric.py           # probe 召回率（block-class 佐证）
+python scripts/run_phase2_context.py          # 上下文压缩 TTFT -93%
+python scripts/run_phase3_offload.py          # 工具外置 new_prefill -83%
+python scripts/run_trace_benchmark.py         # DeepSeek 真实轨迹 A/B
+python scripts/run_llm_judge.py               # DeepSeek-judge 压缩保真
 ```
 
 ## 复现性说明

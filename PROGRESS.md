@@ -2,7 +2,7 @@
 
 > **续上时先读本文件。** 记录当前阶段、已完成、进行中、阻塞、下一步、环境与 GPU 选择。
 
-**当前阶段**：全部完成。vLLM v0.10.2 in-tree patch（7 文件 144 处 Mimir 标记）+ 多模型泛化 + 决定性 A/B（Mimir used=0 vs 原生 74）+ **创新核心 block-class（Phase BC）** + **DeepSeek V4 Pro 真实轨迹 + LLM-judge 诚实评测** + **v1 TTFT 可观测（Phase R）** + ngram speculative decoding。115 测试通过。
+**当前阶段**：全部完成。vLLM v0.10.2 in-tree patch（block-class 创新 + CoW + fp8 降级 + TTFT 回填）。**lifecycle 主动回收机制已删除**（used_blocks→0 系偷换概念，经自审移除）。真卖点：工具外置/压缩真实减少必需 KV（new_prefill -83%/-80%、TTFT -93%）、避免 OOM 崩溃（baseline 第5轮 OOM vs Mimir 存活20轮）、**block-class 创新核心（Phase BC）**、DeepSeek V4 Pro 真实轨迹 + LLM-judge 保真。108 测试通过。
 
 **最后更新**：2026-06-20
 
@@ -76,16 +76,18 @@
 
 ## 续上指南（给下一个会话）
 
-**当前完整度**：Phase A-Q + R + BC + DeepSeek 全部完成。vLLM v0.10.2 拍平为普通目录 `third_party/vllm`（7 文件 in-tree patch，144 处 Mimir 标记），外部优化层 11 方向，四个决定性引擎级 A/B（M 单 agent used 74→0 / O 3agent 并发 14→0 / P KV 池压力 27→0 / Q 工具调用并发 262→0），多模型泛化（1.7B/4B），**创新核心 block-class 类别感知淘汰（Phase BC，5 单测 + 真实引擎验证）**，**DeepSeek V4 Pro 真实轨迹 + LLM-judge 保真 A/B**，115 测试，一键复现。
+**当前完整度**：Phase A-D/F/R/BC + DeepSeek。vLLM v0.10.2 拍平为普通目录 `third_party/vllm`（纯 Python in-tree patch），外部优化层（压缩/外置/分层/CoW），**创新核心 block-class 类别感知淘汰（Phase BC）**，**DeepSeek V4 Pro 真实轨迹 + LLM-judge 保真 A/B**。lifecycle 主动回收机制（Phase C/E/I/J/L/M/O/P）已删除（used_blocks→0 偷换概念）。108 测试，一键复现。真卖点：new_prefill -83%/-80%、TTFT -93%、避免 OOM、block-class 创新。
 
 **如何启动**：`source scripts/activate_env.sh`（fresh clone 先 `bash scripts/setup_vllm_binaries.sh`）。
 
 **可继续推进的方向（按价值排序）**：
-1. **Phase P — 真实 KV 压力淘汰验证**：构造超 KV 池的并发长上下文，验证 mimir 策略下 EVICTABLE 块被优先淘汰（vs LRU-活跃块）。Phase J 写了 reclaim_evictable 但未在真实压力路径练过。
-2. **更重的工作负载 A/B**：Phase M 用的是 10 轮问答；可换成「工具调用密集 + 长上下文」更贴合赛题 tool_call 场景，放大外部压缩/外置的显存收益。
-3. **国产硬件抽象落地**：`mimir/hardware/` 目前是骨架；可加 CUDA/DTK/CANN 设备抽象 + 真实降级测试（赛题鼓励异构）。
-4. **llama.cpp 后端适配**：赛题允许 vLLM/llama.cpp 二选一；加 llama.cpp 后端验证泛化（评分 20）。
-5. **更长上下文生存 demo（视频/动图）**：把 Phase 5 分层存储的「baseline OOM vs Mimir 存活 20 轮」做成可演示动图。
+1. **block-class 在真实 agent 框架验证**：当前 block-class 优势（probe 召回 +48）偏小，可在 BFCL/τ-bench 等真实 agent 基准放大「类别淘汰保住工具结果」的收益。
+2. **国产硬件抽象落地**：`mimir/hardware/` 目前是骨架；可加 CUDA/DTK/CANN 设备抽象 + 真实降级测试（赛题鼓励异构）。
+3. **llama.cpp 后端适配**：赛题允许 vLLM/llama.cpp 二选一；加 llama.cpp 后端验证泛化（评分 20）。
+4. **更长上下文生存 demo（视频/动图）**：把分层存储的「baseline OOM vs Mimir 存活 20 轮」做成可演示动图。
+5. **避免 OOM 场景强化**：构造显存真紧张到 native 崩溃的场景，正面证明 Mimir 靠外置+分层存活（补「显存极限」维度正面证据）。
+
+> 注：原 Phase P/M「并发压测/重工作负载 A/B」方向已废弃——回收机制删除后，并发吞吐场景 Mimir 不占优（见 2026-06-21 会话总结）。
 
 **重要约定（见 CLAUDE.md + memory）**：
 - 频繁 commit + push（每次逻辑里程碑）。
@@ -116,6 +118,13 @@
 - **ngram speculative decoding A/B**：训练无关 decode 加速路径。
 - 全部 benchmark 在空闲卡 0 重测，数据一致可信。
 
-**当前状态**：115 测试通过，ruff clean，git clean & synced，141 commits，评分四维全覆盖 + 创新核心 + 诚实评测。
+**2026-06-21 回收机制删除（诚实自审）**：
+- **lifecycle 主动回收 / per-block pin 全套删除**：经用户审视，used_blocks→0 系任务结束后瞬时计数偷换——推理时该占仍占、回收重算反而拖慢服务、对用户无益。并发压测三种模式（一次性批量/多轮/请求潮）作证：0.9 大池子下 native 靠 preemption 默默扛住，Mimir 回收在吞吐反因重算少完成请求——省显存计数器未换服务收益。
+- 代码删除：block_pool 的 finish_task/reclaim_evictable/pin 全套、scheduler 自驱动回收、engine_v1 回收接口、Phase C/E/I/J/L/M/O/P/Q 脚本与 test_vllm_lifecycle。
+- **保留真东西**：block-class 创新（BC）、CoW（D）、fp8 降级（F）、TTFT 回填（R）、工具外置/压缩/分层、DeepSeek trace+judge。
+- 叙事转向：从「used_blocks →0」转向「真实减少必需 KV（new_prefill -83%/-80%、TTFT -93%）+ 避免 OOM 崩溃（能跑 vs 崩）+ block-class 创新」。
+- 文档全量清扫：README/RESULTS_SUMMARY/测试报告/技术方案/技术演示/PATCH_INVENTORY/系统设计/部署指南 均更新，回收叙事降级为「诚实边界」说明。
 
-**下一会话可推进（PROGRESS 续上指南已列）**：llama.cpp 后端、更重工作负载 A/B、国产硬件真实测试、长上下文生存视频。
+**当前状态**：108 测试通过，ruff clean，git clean & synced，评分四维全覆盖 + 创新核心（block-class）+ 诚实评测 + 诚实自审。
+
+**下一会话可推进**：llama.cpp 后端、国产硬件真实测试、长上下文生存视频、block-class 在更大模型/真实 agent 框架（如 BFCL/τ-bench）验证。
