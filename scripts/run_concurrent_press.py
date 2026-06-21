@@ -31,9 +31,10 @@ from mimir.gpu import pick_least_busy_gpu  # noqa: E402
 CHILD = r"""
 import os, json, sys, time
 sys.path.insert(0, os.getcwd())
-model, gpu, util, mlen, mtok, policy, N = (
+# args: model gpu util mlen mtok policy N rounds
+model, gpu, util, mlen, mtok, policy, N, rounds = (
     sys.argv[1], sys.argv[2], float(sys.argv[3]), int(sys.argv[4]),
-    int(sys.argv[5]), sys.argv[6], int(sys.argv[7]))
+    int(sys.argv[5]), sys.argv[6], int(sys.argv[7]), int(sys.argv[8]))
 os.environ["CUDA_VISIBLE_DEVICES"] = gpu
 from mimir.engine_vllm import EngineConfig
 from mimir.engine_vllm_v1 import VLLMEngineV1
@@ -46,67 +47,75 @@ _ = eng.llm
 bp = eng.mimir_block_pool()
 total_blocks = bp.num_gpu_blocks
 
-# 构造 N 个异质 agent 请求：每个带较长工具结果，撑大单请求 KV。
-# ~3500 token/请求(≈220 块)，池子 5534 块下 native 在 N≈20 撞墙。
 SYS = [
     "You are agent {}, a research analyst. Answer briefly about your topic.",
     "You are agent {}, a code reviewer. Answer briefly about your topic.",
     "You are agent {}, a data scientist. Answer briefly about your topic.",
     "You are agent {}, a technical writer. Answer briefly about your topic.",
 ]
-TOOL_PAYLOAD = "[TOOL_RESULT search]\n" + " ".join(
-    f"distinct_fact_{i} value_{i} payload detail." for i in range(320))
+# 每轮追加的工具结果（模拟 agent 每轮调用工具拿新结果，上下文跨轮累积）
+def tool_payload(k):
+    return "[TOOL_RESULT search]\n" + " ".join(
+        f"turn{k}_fact_{i} value_{i} payload detail." for i in range(120))
 
-msgs_list = []
-task_ids = []
+# 每个 agent 维护自己的累积上下文（跨轮增长，模拟真实 agent）
+histories = []
 for i in range(N):
     sys_msg = SYS[i % len(SYS)].format(i)
-    user = f"Agent {i} task: summarize the key points from the tool result.\n{TOOL_PAYLOAD}"
-    msgs_list.append([{"role": "system", "content": sys_msg}, {"role": "user", "content": user}])
-    task_ids.append(f"agent_{i}")
+    histories.append([{"role": "system", "content": sys_msg}])
 
-pre_used = eng.mimir_stats().get("used_blocks", 0) or 0
+peak_used = 0
+all_ttfts = []
 oom = False
 err = ""
+n_ok_total = 0
 t_start = time.perf_counter()
 try:
-    outs = eng.chat_batch(msgs_list, max_tokens=mtok, task_ids=task_ids)
+    for k in range(rounds):
+        # 本轮：N 个 agent 各自把"新 user 消息(含工具结果)"加进自己的上下文，一起批量提交
+        msgs_list = []
+        task_ids = []
+        for i in range(N):
+            user = f"Agent {i} turn {k}: summarize the tool result.\n{tool_payload(k)}"
+            # 注意：histories[i] 是累积的（跨轮），这里复制一份加本轮 user，不污染原历史用于下一轮拼接
+            msgs = list(histories[i]) + [{"role": "user", "content": user}]
+            msgs_list.append(msgs)
+            task_ids.append(f"agent_{i}_turn_{k}")
+        # 峰值采样：批量提交后立即读（此刻 KV 占用最高）
+        outs = eng.chat_batch(msgs_list, max_tokens=mtok, task_ids=task_ids)
+        st = eng.mimir_stats()
+        cur_used = st.get("used_blocks", 0) or 0
+        peak_used = max(peak_used, cur_used)
+        # 收 TTFT + 把本轮输出加回各 agent 历史（native 侧累积，mimir 侧回收后下一轮也重填）
+        for i, o in enumerate(outs):
+            if o and o.outputs:
+                n_ok_total += 1
+                txt = o.outputs[0].text
+                histories[i].append({"role": "user", "content": f"turn {k}: summarize tool result.\n{tool_payload(k)}"})
+                histories[i].append({"role": "assistant", "content": txt})
+                ttft = _req_metrics(o).get("ttft_ms")
+                if ttft is not None:
+                    all_ttfts.append(ttft)
     wall = time.perf_counter() - t_start
-    n_ok = sum(1 for o in outs if o and o.outputs)
-    # 逐请求 TTFT（服务指标：首字延迟）
-    ttfts = []
-    for o in outs:
-        if o:
-            ttft = _req_metrics(o).get("ttft_ms")
-            if ttft is not None:
-                ttfts.append(ttft)
 except Exception as e:
     wall = time.perf_counter() - t_start
-    n_ok = 0
-    ttfts = []
     err = str(e)[:200]
     msg_lower = err.lower()
     if "out of memory" in msg_lower or "oom" in msg_lower or "no available memory" in msg_lower:
         oom = True
 
-st = eng.mimir_stats()
-post_used = st.get("used_blocks", 0) or 0
-peak_used = max(pre_used, post_used)
-reclaims = st.get("mimir_lifecycle_reclaims", 0)
-
-# 服务维度判定（回答评审"native 撞墙也能跑完"的质疑）：
-# - svc_fail: 有请求没完成(n_ok<N)或 OOM —— 真失败，不靠内部指标
-# - svc_degraded: 全完成但 TTFT 暴涨(>2x N=1 基线或单请求 >5s)—— 服务退化
-avg_ttft = round(sum(ttfts)/len(ttfts), 1) if ttfts else None
-max_ttft = round(max(ttfts), 1) if ttfts else None
-throughput = round(n_ok / wall, 2) if wall > 0 else None  # req/s
-svc_fail = (n_ok < N) or oom
+reclaims = eng.mimir_stats().get("mimir_lifecycle_reclaims", 0)
+expected = N * rounds
+avg_ttft = round(sum(all_ttfts)/len(all_ttfts), 1) if all_ttfts else None
+max_ttft = round(max(all_ttfts), 1) if all_ttfts else None
+throughput = round(n_ok_total / wall, 2) if wall > 0 else None
+svc_fail = (n_ok_total < expected) or oom
 svc_degraded = (not svc_fail) and max_ttft is not None and max_ttft > 5000
 
 print("RESULT_JSON:" + json.dumps({
-    "policy": policy, "N": N, "total_blocks": total_blocks,
-    "pre_used": pre_used, "post_used": post_used, "peak_used": peak_used,
-    "n_ok": n_ok, "svc_fail": svc_fail, "svc_degraded": svc_degraded, "oom": oom,
+    "policy": policy, "N": N, "rounds": rounds, "total_blocks": total_blocks,
+    "peak_used": peak_used, "n_ok": n_ok_total, "expected": expected,
+    "svc_fail": svc_fail, "svc_degraded": svc_degraded, "oom": oom,
     "error": err, "wall_s": round(wall, 2),
     "avg_ttft_ms": avg_ttft, "max_ttft_ms": max_ttft, "throughput_req_s": throughput,
     "lifecycle_reclaims": reclaims,
@@ -114,10 +123,10 @@ print("RESULT_JSON:" + json.dumps({
 """
 
 
-def run_side(model, g, util, mlen, mtok, policy, N):
+def run_side(model, g, util, mlen, mtok, policy, N, rounds):
     r = subprocess.run(
         ["python", "-c", CHILD, model, str(g.index), str(util), str(mlen),
-         str(mtok), policy, str(N)],
+         str(mtok), policy, str(N), str(rounds)],
         capture_output=True, text=True, env=dict(os.environ), timeout=600,
     )
     for line in r.stdout.splitlines():
@@ -133,7 +142,8 @@ def main() -> int:
     ap.add_argument("--gpu-memory-util", type=float, default=0.90)
     ap.add_argument("--max-model-len", type=int, default=32768)
     ap.add_argument("--max-tokens", type=int, default=16)
-    ap.add_argument("--concurrency", default="1,4,16,32,48,64,96", help="并发数序列")
+    ap.add_argument("--concurrency", default="2,4,8,16", help="并发数序列")
+    ap.add_argument("--rounds", type=int, default=5, help="每个 agent 跑的轮数（跨轮累积，Mimir 轮间回收）")
     ap.add_argument("--out-dir", default="benchmark_results")
     args = ap.parse_args()
 
@@ -150,11 +160,11 @@ def main() -> int:
         print(f"\n=== {label} ({policy}) ===", flush=True)
         for N in Ns:
             r = run_side(args.model, g, args.gpu_memory_util, args.max_model_len,
-                         args.max_tokens, policy, N)
+                         args.max_tokens, policy, N, args.rounds)
             results[label].append(r)
             tag = "FAIL" if r.get("svc_fail") else ("SLOW" if r.get("svc_degraded") else "OK")
-            print(f"  N={N:>3}: n_ok={r.get('n_ok')}/{N} avg_ttft={r.get('avg_ttft_ms')!s}ms "
-                  f"wall={r.get('wall_s')}s tput={r.get('throughput_req_s')} peak={r.get('peak_used')!s} [{tag}]", flush=True)
+            print(f"  N={N:>3}: n_ok={r.get('n_ok')}/{r.get('expected',N)} avg_ttft={r.get('avg_ttft_ms')!s}ms "
+                  f"wall={r.get('wall_s')}s peak={r.get('peak_used')!s} reclaims={r.get('lifecycle_reclaims',0)} [{tag}]", flush=True)
 
     # 服务维度的退化/失败点（用服务指标说话，不靠内部 used_blocks）
     def fail_point(rows):
