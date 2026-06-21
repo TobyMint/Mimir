@@ -86,10 +86,11 @@ runs/
 logs/
 *.log
 # benchmark_results/ 我们纳入版本控制（用户要求：benchmark 结果保存到 git）
-# 仅排除其中的超大原始 dump
+# 仅排除其中的超大原始 dump + 运行时 GPU 监控日志
 benchmark_results/**/*.bin
 benchmark_results/**/*.npy
 benchmark_results/**/*.pt
+benchmark_results/**/gpu_log.txt
 
 # ---- vLLM prebuilt binaries (symlinked into the flat copy) ----
 third_party/vllm_prebuilt_bin/
