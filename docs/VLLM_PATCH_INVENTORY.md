@@ -15,9 +15,9 @@ source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=
 
 ## Patch 总览
 
-> **重要更新**：原 lifecycle 主动回收机制（Phase C/E/I/J/L 的 `mimir_finish_task` / per-block pin / `reclaim_evictable` / mimir 策略自驱动回收）经自审系「used_blocks→0 偷换概念」（推理时该占仍占、回收重算拖慢服务），**已从代码彻底删除**。下表保留这些条目仅为可追溯，标注【已删】。保留的真 patch：B（统计）/ D（CoW）/ F（fp8 降级）/ R（TTFT 回填）/ BC（block-class 创新）。
+> **重要更新**：原 lifecycle 主动回收机制（Phase C/E/I/J/L 的 `mimir_finish_task` / per-block pin / `reclaim_evictable` / mimir 策略自驱动回收）经自审系「used_blocks→0 偷换概念」（推理时该占仍占、回收重算拖慢服务），**已从代码彻底删除**。下表保留这些条目仅为可追溯，标注【已删】。保留的真 patch：B（统计）/ D（CoW）/ F（fp8 降级）/ R（TTFT 回填）/ Continuum-TTL（已 port）/ BC（block-class，已弃用为核心，留备查）。
 >
-> **规划新方向**：工具调用边界 TTL 保留（移植 Continuum）+ LMCache 分层 offload 集成 + block-class 语义路由融合，组成"工具调用触发的分层 KV 放置"创新点（见下「与 Continuum/KVFlow 的关系」「规划中：移植/集成」与 [`技术方案.md`](技术方案.md) §3.7）。此部分代码尚未落地。
+> **核心方向（三篇融合）**：工具调用边界 TTL 保留（Continuum，**已 port**）+ LMCache 分层 offload 集成（规划）+ CacheGen KV 编解码压缩集成（规划），组成 agent 工具调用场景下的统一 KV 放置管线（见下「三篇融合」「融合进度」与 [`技术方案.md`](技术方案.md) §3.7）。不自造机制，做三篇融合 + 场景化 + 诚实归因。
 
 | Phase | 文件 | 改动 | 验证结果 |
 | --- | --- | --- | --- |
@@ -40,39 +40,39 @@ source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=
 | **BC** | `src/mimir/engine_vllm_v1.py` | 新增 `chat_full()` 重写 + `_compute_block_classes()`：按消息角色（system/assistant→reasoning/`[TOOL_RESULT`→tool_result/user）把 prompt 块对齐打类别 | 真实 Qwen3-4B 上标签注入成功（block_class_counts 可读） |
 | **BC** | `vllm/v1/core/sched/scheduler.py` | `get_mimir_stats()` 附加 `mimir_class_stats()`（类别块数 + 按类别淘汰数） | 类别感知淘汰可观测、可报告 |
 
-## 与 Continuum / KVFlow 的关系：三正交轴
+## 三篇融合：Continuum + LMCache + CacheGen
 
-业界 agent 感知 KV 管理沿三个**正交维度**展开，非竞争关系：
+Mimir **不自造机制，做三篇融合**——把三篇互补的 prior work 在 agent 工具调用场景下串成统一 KV 放置管线（详见 [`技术方案.md`](技术方案.md) §3.7）：
 
-| 维度 | 代表工作 | 决策内容 | 粒度 | 引擎 |
-| --- | --- | --- | --- | --- |
-| **何时**释放 | Continuum（arXiv 2511.02230） | 工具调用暂停时挂 TTL 保留 KV | whole-request pin | vLLM 0.10.2 |
-| **哪个 agent**前缀该淘汰 | KVFlow（arXiv 2507.07400） | 按 steps-to-execution 调度感知淘汰 | radix-node / agent-prefix | SGLang |
-| **哪种语义角色**该先淘汰 | **Mimir block-class** | 按块语义类别（system/user/reasoning/tool_result）路由 | per-block / 角色级 | vLLM 0.10.2 |
+| 环节 | 论文 | 贡献 | 引擎 |
+| --- | --- | --- | --- |
+| **何时**留/放 | Continuum（arXiv 2511.02230） | 工具调用边界 + TTL 保留 + cost-benefit | vLLM 0.10.2 |
+| **搬去哪/怎么搬** | LMCache（arXiv 2510.09665） | GPU↔CPU↔磁盘分层 offload、layer-wise 重叠、pin/lookup | vLLM 0.10.2 |
+| **怎么压/怎么传得快** | CacheGen（arXiv 2310.07240, SIGCOMM'24） | delta+分层量化+算术编码压 KV 成 bitstream（3.5–4.3× 压） | HF transformers |
 
-- **Continuum** 把整个请求 KV 当一整块 pin/evict；**KVFlow** 把非固定前缀一刀切为"后缀"全淘汰（不区分 reasoning 与 tool_result）；**LMCache**（arXiv 2510.09665）是 GPU↔CPU↔压缩通用搬运底座，语义无感、按 LRU/热度搬。
-- **Mimir 的贡献**：在工具调用边界把上述三轴**贯通**——Continuum 出"何时"（TTL 触发）、LMCache 出"搬去哪/怎么搬"（分层 offload）、block-class 出"哪类块走哪层"（语义路由，粘合剂），使融合不退化为 naive 拼接（详见 [`技术方案.md`](技术方案.md) §3.7）。block-class 不作为"压过 Continuum 的夺冠点"，而是融合的必要组成。
+**融合管线**：工具调用暂停 → Continuum TTL pin KV → 显存紧 → LMCache offload 到 CPU（**CacheGen 编码成 bitstream**）→ 下一步回来 → LMCache reload + CacheGen 解码 → 快于重 prefill、也快于搬原始张量。**三篇无人串成这条 agent 工具调用管线**——Mimir 贡献：集成 + 场景化 + 诚实定位。CacheGen 是关键拼图：naive Continuum+LMCache 搬未压缩张量慢，CacheGen 压缩使低带宽下 reload 仍赢 prefill。
 
-> 注：此前文档「无论文做过 agent 感知 KV 淘汰」的表述不准确——KVFlow / Continuum 均为公开 prior work，沿不同轴。Mimir 的差异在"语义角色轴"及其与 TTL/offload 的融合。
+KVFlow（arXiv 2507.07400）走第四轴（"哪个 agent 该淘汰"，steps-to-execution），作 related work 提及，不做集成。早期 block-class「按语义角色淘汰」经重审不再作核心创新（见 §3.7 注），代码暂留备查。
 
-## 规划中：移植 Continuum TTL + 集成 LMCache（未实现）
+> 注：此前文档「无论文做过 agent 感知 KV 淘汰」的表述不准确——KVFlow/Continuum 均为公开 prior work。
 
-> 以下为**规划中**工作，代码尚未落地；如实标注，不充已实现。
+## 融合进度：Continuum（已 port）+ LMCache/CacheGen（规划集成）
 
 | 来源 | 内容 | 状态 |
 | --- | --- | --- |
-| Continuum（`Hanchenli/vllm-continuum`，v0.10.2 fork，已 clone 备查） | 工具调用边界 TTL 保留：`Request` 加 `job_id`/`is_last_step`/`this_func_call` 字段（搭便车走 vanilla `SamplingParams.extra_args`）、`ToolCallEstimator`（simplified 释放版固定 2.0s TTL，非论文 cost-benefit CDF）、`pin_request`/`unpin_requests_regular`/死锁兜底驱逐、program-level FCFS。**并入 `"mimir"` 策略**，对外仍叫 Mimir，不新增 `continuum` policy。 | 规划移植 |
-| LMCache（`LMCache/LMCache`，vLLM 0.10.2 兼容） | GPU↔CPU↔压缩分层 offload 底座：chunk 级批量搬运、layer-wise 与计算重叠、reload>recompute、pin/compress/lookup 控制台 API。作为 TTL 到期/显存紧时"按类别降级"的搬运后端。 | 规划集成 |
-| Mimir（自有） | block-class 语义路由策略：决定每类块（system/tool_result/reasoning/user）在 TTL 窗内 pin-GPU / offload-CPU / compress / drop。粘合剂。 | 标签+淘汰已实现，分层路由规划中 |
+| Continuum（`Hanchenli/vllm-continuum`，v0.10.2 fork） | 工具调用边界 TTL 保留：`Request` 加 `job_id`/`is_last_step`/`this_func_call` 字段（搭便车走 vanilla `SamplingParams.extra_args`）、`ToolCallEstimator`（simplified 释放版固定 2.0s TTL）、`pin_request`/`unpin_requests_regular`/死锁兜底、program-level FCFS。并入 `"mimir"` 策略，对外仍叫 Mimir。 | **已 port 验证**（commit d9070f3，13 单测 + 真引擎冒烟） |
+| LMCache（`LMCache/LMCache`，vLLM 0.10.2 兼容） | GPU↔CPU↔磁盘分层 offload 底座：chunk 级批量搬运、layer-wise 与计算重叠、reload>recompute、pin/lookup API。作为 TTL 到期/显存紧时的 offload 后端。 | 规划集成 |
+| CacheGen（`UChi-JCL/CacheGen`，HF transformers 接口） | KV 编解码：delta+分层量化+算术编码把 KV 张量压成 bitstream（3.5–4.3× 压、3.2–3.7× 快）。offload 时编码、reload 时解码，使低带宽 reload 仍赢 prefill。 | 规划集成 |
+| Mimir（自有编排） | 把三者串成工具调用场景的统一管线：TTL 触发 → offload → 编码/解码。`engine_vllm_v1` 适配层接线。 | Continuum 接线已落地；LMCache/CacheGen 接线规划中 |
 
-**诚实边界**：TTL 保留/分层 offload 收益依赖显存争用（并发多轮 agent），单 agent 顺序跑收益≈0；短上下文+低 PCIe 带宽下 reload 不一定赢 prefill（LMCache 自述 32Gbps 下需 >256K token）。benchmark 须用并发多轮场景，如实报数。Continuum/LMCache 为 credited prior work，移植集成不占为己有。
+**诚实边界**：TTL/offload 收益依赖显存争用（并发多轮 agent），单 agent 顺序跑收益≈0；短上下文+低带宽 reload 不一定赢 prefill（CacheGen/LMCache 自述）——benchmark 须用并发多轮场景，如实报数。三篇为 credited prior work，移植集成不占为己有。
 
 ## Mimir 侧适配器
 
 `src/mimir/engine_vllm_v1.py`：`VLLMEngineV1`（强制 v1 InprocClient）暴露
-- `kv_usage()` / `mimir_stats()`：读 v1 block_pool + scheduler 的块统计（used/total/CoW/block_class）
+- `kv_usage()` / `mimir_stats()`：读 v1 block_pool + scheduler 的块统计（used/total/CoW）
 - `set_current_task(task_id)` / `chat_task(...)`：注入 `engine_core._mimir_current_task`（CoW 记账用）
-- `chat_full()` / `chat_batch()`：block-class 标签注入 + 真批量并发
+- `chat_full()` / `chat_batch()`：Continuum TTL 元数据注入（`extra_args` 的 `job_id`/`this_func_call`/`is_last_step`）+ 真批量并发
 
 ## 验证脚本
 
