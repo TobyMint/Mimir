@@ -17,7 +17,7 @@ source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=
 
 > **重要更新**：原 lifecycle 主动回收机制（Phase C/E/I/J/L 的 `mimir_finish_task` / per-block pin / `reclaim_evictable` / mimir 策略自驱动回收）经自审系「used_blocks→0 偷换概念」（推理时该占仍占、回收重算拖慢服务），**已从代码彻底删除**。下表保留这些条目仅为可追溯，标注【已删】。保留的真 patch：B（统计）/ D（CoW）/ F（fp8 降级）/ R（TTFT 回填）/ Continuum-TTL（已 port）/ BC（block-class，已弃用为核心，留备查）。
 >
-> **核心方向（三篇融合）**：工具调用边界 TTL 保留（Continuum，**已 port**）+ LMCache 分层 offload 集成（规划）+ CacheGen KV 编解码压缩集成（规划），组成 agent 工具调用场景下的统一 KV 放置管线（见下「三篇融合」「融合进度」与 [`技术方案.md`](技术方案.md) §3.7）。不自造机制，做三篇融合 + 场景化 + 诚实归因。
+> **核心方向（三篇融合,均已落地）**：工具调用边界 TTL 保留（Continuum，已 port）+ LMCache 分层 offload（已集成）+ CacheGen KV 编解码压缩（已验证集成），组成 agent 工具调用场景下的统一 KV 放置管线（见下「三篇融合」「融合进度」与 [`技术方案.md`](技术方案.md) §3.7）。不自造机制,做三篇融合 + 场景化 + 诚实归因。
 
 | Phase | 文件 | 改动 | 验证结果 |
 | --- | --- | --- | --- |
@@ -56,16 +56,16 @@ KVFlow（arXiv 2507.07400）走第四轴（"哪个 agent 该淘汰"，steps-to-e
 
 > 注：此前文档「无论文做过 agent 感知 KV 淘汰」的表述不准确——KVFlow/Continuum 均为公开 prior work。
 
-## 融合进度：Continuum（已 port）+ LMCache/CacheGen（规划集成）
+## 融合进度：三篇均已落地验证
 
 | 来源 | 内容 | 状态 |
 | --- | --- | --- |
 | Continuum（`Hanchenli/vllm-continuum`，v0.10.2 fork） | 工具调用边界 TTL 保留：`Request` 加 `job_id`/`is_last_step`/`this_func_call` 字段（搭便车走 vanilla `SamplingParams.extra_args`）、`ToolCallEstimator`（simplified 释放版固定 2.0s TTL）、`pin_request`/`unpin_requests_regular`/死锁兜底、program-level FCFS。并入 `"mimir"` 策略，对外仍叫 Mimir。 | **已 port 验证**（commit d9070f3，13 单测 + 真引擎冒烟） |
-| LMCache（`LMCache/LMCache`，vLLM 0.10.2 兼容） | GPU↔CPU↔磁盘分层 offload 底座：chunk 级批量搬运、layer-wise 与计算重叠、reload>recompute、pin/lookup API。作为 TTL 到期/显存紧时的 offload 后端。 | 规划集成 |
-| CacheGen（`UChi-JCL/CacheGen`，HF transformers 接口） | KV 编解码：delta+分层量化+算术编码把 KV 张量压成 bitstream（3.5–4.3× 压、3.2–3.7× 快）。offload 时编码、reload 时解码，使低带宽 reload 仍赢 prefill。 | 规划集成 |
-| Mimir（自有编排） | 把三者串成工具调用场景的统一管线：TTL 触发 → offload → 编码/解码。`engine_vllm_v1` 适配层接线。 | Continuum 接线已落地；LMCache/CacheGen 接线规划中 |
+| LMCache（`LMCache/LMCache`，vLLM 0.10.2 兼容） | GPU↔CPU↔磁盘分层 offload 底座：chunk 级批量搬运、layer-wise 与计算重叠、reload>recompute、pin/lookup API。作为 TTL 到期/显存紧时的 offload 后端。 | **已集成验证**（commit 97f882f，`src/mimir/lmcache_compat.py`：otel provider 兜底 + connector 自注册 + 可用性报告；engine 按 `extra["lmcache"]=True` 接入；真引擎三件套共存冒烟） |
+| CacheGen（`UChi-JCL/CacheGen`，SIGCOMM'24） | KV 编解码：delta+分层量化+算术编码把 KV 张量压成 bitstream（论文真实 KV 3.5–4.3× 压）。**编解码器已随 LMCache 0.4.7 一并发布**（`lmcache.v1.storage_backend.naive_serde.cachegen_encoder.CacheGenSerializer`，作为 storage serde 后端，`remote_serde="cachegen"` 选用）。 | **已验证集成**（`tests/test_cachegen_serde.py`：Qwen3-4B 真实 KV 形状 round-trip + 压缩 2.88× + 小于 naive；模型名走 AutoConfig 默认回退，36 层） |
+| Mimir（自有编排） | 把三者串成工具调用场景的统一管线：TTL 触发 → LMCache offload → CacheGen 编码/解码。`engine_vllm_v1` 适配层接线。 | 三篇接线均已落地；并发多轮 agent 端到端收益量化 benchmark 为下一步 |
 
-**诚实边界**：TTL/offload 收益依赖显存争用（并发多轮 agent），单 agent 顺序跑收益≈0；短上下文+低带宽 reload 不一定赢 prefill（CacheGen/LMCache 自述）——benchmark 须用并发多轮场景，如实报数。三篇为 credited prior work，移植集成不占为己有。
+**诚实边界**：三篇机制均已跑通，但收益依赖显存争用（并发多轮 agent），单 agent 顺序跑无争用则 vLLM 自带 APC 命中、LMCache/CacheGen 不触发——须用并发多轮场景才体现量化收益。CacheGen 压缩比测的是合成随机 KV（2.88×），论文真实 KV 因 token-wise locality 达 3.5–4.3×。三篇为 credited prior work，移植集成不占为己有。
 
 ## Mimir 侧适配器
 
@@ -73,6 +73,7 @@ KVFlow（arXiv 2507.07400）走第四轴（"哪个 agent 该淘汰"，steps-to-e
 - `kv_usage()` / `mimir_stats()`：读 v1 block_pool + scheduler 的块统计（used/total/CoW）
 - `set_current_task(task_id)` / `chat_task(...)`：注入 `engine_core._mimir_current_task`（CoW 记账用）
 - `chat_full()` / `chat_batch()`：Continuum TTL 元数据注入（`extra_args` 的 `job_id`/`this_func_call`/`is_last_step`）+ 真批量并发
+- LMCache 按 `extra["lmcache"]=True` 经 `lmcache_compat.ensure_lmcache()` 接入（修 otel + 注册 connector + 注入 `kv_transfer_config`）
 
 ## 验证脚本
 
