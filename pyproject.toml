@@ -45,6 +45,12 @@ dependencies = [
 vllm = ["vllm"]
 llamacpp = ["llama-cpp-python"]
 
+# 三篇融合:LMCache CPU offload 底座(与 in-tree vLLM 0.10.2 兼容)。
+# 装: pip install --no-deps lmcache 然后 pip install --no-deps sortedcontainers
+#      aiofile aiofiles caio pyzmq redis(本体依赖,cupy/nixl 等重型 dep 按需)。
+# 可选 — 不装时 ensure_lmcache() 返回 available=False,引擎照常跑(无 offload)。
+lmcache = ["lmcache"]
+
 # 智能体工作流
 agent = [
     "langchain>=0.1",

@@ -106,7 +106,25 @@ class VLLMEngineV1(VLLMEngine):
         # TTFT observability (the in-tree Phase R patch attaches these to
         # RequestOutput.metrics). Stock LLM() force-disables log_stats; undo it.
         kwargs.setdefault("disable_log_stats", False)
-        kwargs.update(c.extra)
+
+        # 三篇融合:按需启用 LMCache(CPU offload 底座)。extra["lmcache"]=True
+        # 时调 ensure_lmcache()(修 otel + 注册 connector)并注入 kv_transfer_config。
+        # 与 Continuum TTL 松耦合:TTL 决定何时留/放,LMCache 负责 store/reload。
+        # 注意:extra 里还含 scheduling_policy/vllm-kwargs,这些要原样透传给 LLM(),
+        # 故只滤掉我们自己的两个内部标志 lmcache/lmcache_role。
+        self._lmcache_report = None
+        if c.extra.get("lmcache"):
+            from mimir.lmcache_compat import ensure_lmcache, kv_transfer_config
+            self._lmcache_report = ensure_lmcache()
+            if self._lmcache_report.get("available") and "kv_transfer_config" not in c.extra:
+                kwargs["kv_transfer_config"] = kv_transfer_config(
+                    role=c.extra.get("lmcache_role", "kv_both"))
+
+        # 透传 extra(scheduling_policy 等原样给 LLM;仅剔我们的内部标志)
+        for k, v in c.extra.items():
+            if k in ("lmcache", "lmcache_role"):
+                continue
+            kwargs[k] = v
         t0 = time.perf_counter()
         self._llm = LLM(**kwargs)
         self._engine_init_s = time.perf_counter() - t0
