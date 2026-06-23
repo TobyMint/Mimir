@@ -16,6 +16,8 @@ source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=
 ## Patch 总览
 
 > **重要更新**：原 lifecycle 主动回收机制（Phase C/E/I/J/L 的 `mimir_finish_task` / per-block pin / `reclaim_evictable` / mimir 策略自驱动回收）经自审系「used_blocks→0 偷换概念」（推理时该占仍占、回收重算拖慢服务），**已从代码彻底删除**。下表保留这些条目仅为可追溯，标注【已删】。保留的真 patch：B（统计）/ D（CoW）/ F（fp8 降级）/ R（TTFT 回填）/ BC（block-class 创新）。
+>
+> **规划新方向**：工具调用边界 TTL 保留（移植 Continuum）+ LMCache 分层 offload 集成 + block-class 语义路由融合，组成"工具调用触发的分层 KV 放置"创新点（见下「与 Continuum/KVFlow 的关系」「规划中：移植/集成」与 [`技术方案.md`](技术方案.md) §3.7）。此部分代码尚未落地。
 
 | Phase | 文件 | 改动 | 验证结果 |
 | --- | --- | --- | --- |
@@ -38,17 +40,32 @@ source scripts/activate_env.sh          # conda + LD_LIBRARY_PATH + VLLM_USE_V1=
 | **BC** | `src/mimir/engine_vllm_v1.py` | 新增 `chat_full()` 重写 + `_compute_block_classes()`：按消息角色（system/assistant→reasoning/`[TOOL_RESULT`→tool_result/user）把 prompt 块对齐打类别 | 真实 Qwen3-4B 上标签注入成功（block_class_counts 可读） |
 | **BC** | `vllm/v1/core/sched/scheduler.py` | `get_mimir_stats()` 附加 `mimir_class_stats()`（类别块数 + 按类别淘汰数） | 类别感知淘汰可观测、可报告 |
 
-## 与同实验室 Continuum 的区别
+## 与 Continuum / KVFlow 的关系：三正交轴
 
-Continuum（`vllm-continuum`/`vllm-diff`，同为 v0.10.2 fork）做的是 **工具调用暂停时
-的 KV-pin（time-bounded 估计 + whole-request）**。Mimir 在内存管理上的差异化：
+业界 agent 感知 KV 管理沿三个**正交维度**展开，非竞争关系：
 
-| 维度 | Continuum | Mimir |
+| 维度 | 代表工作 | 决策内容 | 粒度 | 引擎 |
+| --- | --- | --- | --- | --- |
+| **何时**释放 | Continuum（arXiv 2511.02230） | 工具调用暂停时挂 TTL 保留 KV | whole-request pin | vLLM 0.10.2 |
+| **哪个 agent**前缀该淘汰 | KVFlow（arXiv 2507.07400） | 按 steps-to-execution 调度感知淘汰 | radix-node / agent-prefix | SGLang |
+| **哪种语义角色**该先淘汰 | **Mimir block-class** | 按块语义类别（system/user/reasoning/tool_result）路由 | per-block / 角色级 | vLLM 0.10.2 |
+
+- **Continuum** 把整个请求 KV 当一整块 pin/evict；**KVFlow** 把非固定前缀一刀切为"后缀"全淘汰（不区分 reasoning 与 tool_result）；**LMCache**（arXiv 2510.09665）是 GPU↔CPU↔压缩通用搬运底座，语义无感、按 LRU/热度搬。
+- **Mimir 的贡献**：在工具调用边界把上述三轴**贯通**——Continuum 出"何时"（TTL 触发）、LMCache 出"搬去哪/怎么搬"（分层 offload）、block-class 出"哪类块走哪层"（语义路由，粘合剂），使融合不退化为 naive 拼接（详见 [`技术方案.md`](技术方案.md) §3.7）。block-class 不作为"压过 Continuum 的夺冠点"，而是融合的必要组成。
+
+> 注：此前文档「无论文做过 agent 感知 KV 淘汰」的表述不准确——KVFlow / Continuum 均为公开 prior work，沿不同轴。Mimir 的差异在"语义角色轴"及其与 TTL/offload 的融合。
+
+## 规划中：移植 Continuum TTL + 集成 LMCache（未实现）
+
+> 以下为**规划中**工作，代码尚未落地；如实标注，不充已实现。
+
+| 来源 | 内容 | 状态 |
 | --- | --- | --- |
-| 核心机制 | 工具调用暂停时 KV-pin（time-bounded + whole-request） | tool-call 感知 per-block **类别淘汰**（block-class 创新，按语义角色路由） |
-| 真实减少必需 KV | 无（聚焦 pin） | **有**（工具外置/压缩，new_prefill -83%/-80%） |
-| CoW 记账 | 无 | **有**（Phase D 跨分支复用计数） |
-| fp8 容错 | 无 | **有**（Phase F 优雅降级） |
+| Continuum（`Hanchenli/vllm-continuum`，v0.10.2 fork，已 clone 备查） | 工具调用边界 TTL 保留：`Request` 加 `job_id`/`is_last_step`/`this_func_call` 字段（搭便车走 vanilla `SamplingParams.extra_args`）、`ToolCallEstimator`（simplified 释放版固定 2.0s TTL，非论文 cost-benefit CDF）、`pin_request`/`unpin_requests_regular`/死锁兜底驱逐、program-level FCFS。**并入 `"mimir"` 策略**，对外仍叫 Mimir，不新增 `continuum` policy。 | 规划移植 |
+| LMCache（`LMCache/LMCache`，vLLM 0.10.2 兼容） | GPU↔CPU↔压缩分层 offload 底座：chunk 级批量搬运、layer-wise 与计算重叠、reload>recompute、pin/compress/lookup 控制台 API。作为 TTL 到期/显存紧时"按类别降级"的搬运后端。 | 规划集成 |
+| Mimir（自有） | block-class 语义路由策略：决定每类块（system/tool_result/reasoning/user）在 TTL 窗内 pin-GPU / offload-CPU / compress / drop。粘合剂。 | 标签+淘汰已实现，分层路由规划中 |
+
+**诚实边界**：TTL 保留/分层 offload 收益依赖显存争用（并发多轮 agent），单 agent 顺序跑收益≈0；短上下文+低 PCIe 带宽下 reload 不一定赢 prefill（LMCache 自述 32Gbps 下需 >256K token）。benchmark 须用并发多轮场景，如实报数。Continuum/LMCache 为 credited prior work，移植集成不占为己有。
 
 ## Mimir 侧适配器
 

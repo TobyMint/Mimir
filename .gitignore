@@ -99,3 +99,6 @@ third_party/vllm/vllm/*.so
 third_party/vllm/vllm/vllm_flash_attn
 third_party/vllm/vllm/vllm_flash_attn/*.so
 .deepseek_key
+
+# 参考论文 PDF（Continuum/KVFlow/LMCache，不入库）
+papers/
