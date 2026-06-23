@@ -110,6 +110,17 @@ class VLLMEngineV1(VLLMEngine):
         t0 = time.perf_counter()
         self._llm = LLM(**kwargs)
         self._engine_init_s = time.perf_counter() - t0
+        # Continuum TTL 移植：把已加载的 tokenizer 注入 scheduler 的 ToolCallEstimator，
+        # 使其 request_finished 能 detokenize 输出并按 [TOOL: ...]/[FINAL: ...] 解析，
+        # 决定是否挂 TTL pin（非 tool/末步不 pin）。仅 mimir 策略生效。
+        if c.extra.get("scheduling_policy") == "mimir":
+            try:
+                tok = self._llm.get_tokenizer()
+                est = getattr(self.mimir_scheduler(), "tool_call_estimator", None)
+                if est is not None:
+                    est.set_tokenizer(tok)
+            except Exception:
+                pass
 
     def kv_usage(self) -> dict[str, Any]:
         if self._llm is None:
@@ -211,8 +222,17 @@ class VLLMEngineV1(VLLMEngine):
         *,
         max_tokens: int = 256,
         temperature: float = 0.0,
+        job_id: str | None = None,
+        this_func_call: str | None = None,
+        is_last_step: bool | None = None,
     ) -> Any:
-        """单轮 chat，返回完整 ``RequestOutput``。注入 block-class 标签（创新核心）。"""
+        """单轮 chat，返回完整 ``RequestOutput``。
+
+        注入 block-class 标签（创新核心）+ agent 多轮程序元数据（移植自 Continuum
+        的工具调用边界 TTL）:  ``job_id`` 标识同一 agent 程序的跨步 KV 复用,
+        ``this_func_call`` 是本步发出的工具名(决定是否挂 TTL pin), ``is_last_step``
+        标记程序末步(末步不 pin、直接释放)。
+        """
         # 计算 per-block 类别并经 engine_core 挂到 Request（core.py Phase-C 站点旁路读取）
         try:
             classes = self._compute_block_classes(messages)
@@ -223,7 +243,15 @@ class VLLMEngineV1(VLLMEngine):
                 ec._mimir_block_classes = []  # noqa: SLF001
         except Exception:
             pass
-        sp = self._make_sp(max_tokens, temperature)
+        # agent 元数据搭便车进 vanilla SamplingParams.extra_args
+        extra: dict[str, Any] | None = None
+        if job_id is not None:
+            extra = {
+                "job_id": job_id,
+                "this_func_call": this_func_call,
+                "is_last_step": is_last_step,
+            }
+        sp = self._make_sp(max_tokens, temperature, extra=extra)
         outs = self.llm.chat([messages], sp, use_tqdm=False)
         return outs[0]
 

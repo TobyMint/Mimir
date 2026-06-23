@@ -243,7 +243,19 @@ def run_agent_loop(
         t0 = time.perf_counter()
         try:
             if hasattr(eng, "chat_full"):
-                ro = eng.chat_full(messages, max_tokens=max_tokens, temperature=0.0)
+                # job_id 标识同一 agent 程序的同 task —— 让工具调用边界 TTL
+                # 把本步 KV pin 住，同 job 下一步复用、免重 prefill。this_func_call /
+                # is_last_step 由 scheduler estimator 从输出 detokenize-parse 决定。
+                kw = {"max_tokens": max_tokens, "temperature": 0.0}
+                if getattr(eng, "config", None) is not None and \
+                        getattr(eng.config, "extra", {}).get("scheduling_policy") == "mimir":
+                    kw["job_id"] = task["name"]
+                try:
+                    ro = eng.chat_full(messages, **kw)
+                except TypeError:
+                    # 兼容不支持 job_id 形参的 chat_full（mock/旧实现）
+                    kw.pop("job_id", None)
+                    ro = eng.chat_full(messages, max_tokens=max_tokens, temperature=0.0)
                 text = ro.outputs[0].text
                 rm = _req_metrics(ro)
                 ttft = rm.get("ttft_ms")

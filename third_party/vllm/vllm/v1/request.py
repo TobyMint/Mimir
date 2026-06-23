@@ -60,6 +60,17 @@ class Request:
         # P/D: Connector-specific KV transfer parameters.
         self.kv_transfer_params: Optional[dict[str, Any]] = None
 
+        # ---- Mimir patch (Continuum TTL 移植): agent 多轮程序元数据 ----
+        # 搭便车走 vanilla SamplingParams.extra_args（不改 SamplingParams 本身）。
+        # job_id = agent 多轮程序 id（同一程序的跨步 KV 复用 / TTL pin 记账）；
+        # this_func_call = 本步发出的工具名（决定是否挂 TTL pin）；
+        # is_last_step = 本步是否程序最后一步（最后步不 pin，直接释放）；
+        # last_func_call = 上一步发出的工具名（continuum_recorder 在线学习工具执行时间）。
+        self.job_id: Optional[str] = None
+        self.last_func_call: Optional[str] = None
+        self.is_last_step: Optional[bool] = None
+        self.this_func_call: Optional[str] = None
+
         if pooling_params is not None:
             # Pooling models.
             self.max_tokens = 1
@@ -74,6 +85,14 @@ class Request:
             if sampling_params.extra_args is not None:
                 self.kv_transfer_params = \
                     sampling_params.extra_args.get("kv_transfer_params")
+                # ---- Mimir patch (Continuum TTL 移植): 读 4 个 agent 元数据 ----
+                self.job_id = sampling_params.extra_args.get("job_id")
+                self.last_func_call = sampling_params.extra_args.get(
+                    "last_func_call")
+                self.is_last_step = sampling_params.extra_args.get("is_last_step")
+                self.this_func_call = sampling_params.extra_args.get(
+                    "this_func_call")
+                # ---- Mimir patch end ----
         else:
             raise ValueError(
                 "sampling_params and pooling_params can't both be unset")

@@ -19,6 +19,10 @@ from vllm.logger import init_logger
 from vllm.multimodal import MULTIMODAL_REGISTRY, MultiModalRegistry
 from vllm.v1.core.encoder_cache_manager import (EncoderCacheManager,
                                                 compute_encoder_budget)
+# ---- Mimir patch (Continuum TTL 移植): 工具调用边界 TTL 估计器 ----
+from vllm.v1.core.estimate_with_func import (Continuum_Recorder,
+                                             ToolCallEstimator)
+# ---- Mimir patch end ----
 from vllm.v1.core.kv_cache_manager import KVCacheBlocks, KVCacheManager
 from vllm.v1.core.sched.interface import SchedulerInterface
 from vllm.v1.core.sched.output import (CachedRequestData, NewRequestData,
@@ -117,11 +121,13 @@ class Scheduler(SchedulerInterface):
         elif self.scheduler_config.policy == "fcfs":
             self.policy = SchedulingPolicy.FCFS
         elif self.scheduler_config.policy == "mimir":
-            # ---- Mimir patch (Phase G) ----
-            # Mimir 策略：FCFS 调度顺序，但启用 Mimir 内存管线
-            # （Phase C 生命周期回收 / D CoW / E pin 由 manager.py 协同调用）。
+            # ---- Mimir patch (Phase G + Continuum TTL 移植) ----
+            # Mimir 策略：Continuum 风格 program-level 调度 + 工具调用边界 TTL 保留。
+            # 原生命周期主动回收（lifecycle reclaim）已删除（used_blocks→0 偷换概念）。
             self.policy = SchedulingPolicy.MIMIR
-            logger.info("Mimir scheduling policy active (lifecycle+CoW+pin enabled)")
+            logger.info(
+                "Mimir scheduling policy active "
+                "(block-class + CoW + Continuum-TTL pin enabled)")
             # ---- Mimir patch end ----
         else:
             raise ValueError(
@@ -129,6 +135,28 @@ class Scheduler(SchedulerInterface):
         # Priority queues for requests.
         self.waiting = create_request_queue(self.policy)
         self.running: list[Request] = []
+
+        # ---- Mimir patch (Continuum TTL 移植): pinned KV 状态 + TTL 估计器 ----
+        # 只在 mimir 策略下启用；其它策略保持 vanilla 行为。
+        # pinned_requests: list[(Request, pin_end_time)] —— TTL 未到期的 KV pin，
+        #   其 KV 不在请求结束时释放，留给同 job 下一步复用。
+        # pinned_job_ids: 当前被 pin 的 job_id 集合（注入给 MimirRequestQueue 做 pin 优先调度）。
+        # tool_call_estimator: 工具调用执行时间在线学习 + set_up_pin 决策 TTL。
+        # continuum_recorder: 调度事件离线记录（移植自 Continuum）。
+        self.pinned_requests: list[tuple[Request, float]] = []
+        self.pinned_job_ids: set[str] = set()
+        self.tool_call_estimator: Optional[ToolCallEstimator] = None
+        self.continuum_recorder: Optional[Continuum_Recorder] = None
+        if self.policy == SchedulingPolicy.MIMIR:
+            self.continuum_recorder = Continuum_Recorder()
+            # tokenizer 仅用于 detokenize-parse 路径（默认不走）；
+            # Mimir adapter 直接在 extra_args 传 this_func_call，故传 None。
+            self.tool_call_estimator = ToolCallEstimator(tokenizer=None)
+            # 把 pinned_job_ids 引用注入队列（pin 优先调度）
+            set_pinned = getattr(self.waiting, "set_pinned_job_ids", None)
+            if callable(set_pinned):
+                set_pinned(self.pinned_job_ids)
+        # ---- Mimir patch end ----
 
         # The request IDs that are finished in between the previous and the
         # current steps. This is used to notify the workers about the finished
@@ -209,6 +237,11 @@ class Scheduler(SchedulerInterface):
 
         # For logging.
         scheduled_timestamp = time.monotonic()
+
+        # ---- Mimir patch (Continuum TTL 移植): 每步先清掉过期 pin ----
+        if self.policy == SchedulingPolicy.MIMIR:
+            self.unpin_requests_regular()
+        # ---- Mimir patch end ----
 
         # First, schedule the RUNNING requests.
         req_index = 0
@@ -490,9 +523,22 @@ class Scheduler(SchedulerInterface):
 
                 if new_blocks is None:
                     # The request cannot be scheduled.
+                    # ---- Mimir patch (Continuum TTL 移植): 死锁兜底 ----
+                    # 当 running 已空但仍分不出块（显存被 pinned 占满），
+                    # 驱逐一个 TTL pin 让出显存，避免调度死锁。
+                    if (self.policy == SchedulingPolicy.MIMIR
+                            and len(self.running) == 0 and self.pinned_requests):
+                        victim = self.pop_running_request_based_on_last_step(
+                            request)
+                        if victim is not None and victim[0] not in self.waiting:
+                            # 被驱逐的 pinned req 回到 waiting 重排（pin 已撤销、
+                            # KV 已 free，下一步将重 prefill）
+                            self.waiting.prepend_request(victim[0])
+                            victim[0].status = RequestStatus.PREEMPTED
+                            victim[0].num_computed_tokens = 0
+                        continue
+                    # ---- Mimir patch end ----
                     break
-
-                # KVTransfer: the connector uses this info to determine
                 # if a load is needed. Note that
                 # This information is used to determine if a load is
                 # needed for this request.
@@ -1103,6 +1149,18 @@ class Scheduler(SchedulerInterface):
         self.requests[request.request_id] = request
         if self.log_stats:
             request.record_event(EngineCoreEventType.QUEUED)
+        # ---- Mimir patch (Continuum TTL 移植): 请求到达 → 在线学习工具执行时间 ----
+        if self.policy == SchedulingPolicy.MIMIR \
+                and self.tool_call_estimator is not None \
+                and getattr(request, "job_id", None) is not None:
+            try:
+                self.tool_call_estimator.request_arrives(request)
+            except Exception:
+                # estimator 仅供 TTL 决策，绝不能阻塞调度主路径
+                pass
+            if self.continuum_recorder is not None:
+                self.continuum_recorder.request_arrives(request)
+        # ---- Mimir patch end ----
 
     def finish_requests(
         self,
@@ -1146,6 +1204,11 @@ class Scheduler(SchedulerInterface):
         # Second pass: set status and free requests
         for request in valid_requests:
             request.status = finished_status
+            # ---- Mimir patch (Continuum TTL 移植): 外部中止时撤销 pin ----
+            # 被中止的请求若正被 TTL pin，应立即撤销 + 释放 KV，避免 leaked pin。
+            if self.policy == SchedulingPolicy.MIMIR:
+                self._unpin_job(getattr(request, "job_id", None))
+            # ---- Mimir patch end ----
             self._free_request(request)
 
     def _free_request(self, request: Request) -> Optional[dict[str, Any]]:
@@ -1165,10 +1228,102 @@ class Scheduler(SchedulerInterface):
 
     def _free_blocks(self, request: Request):
         assert request.is_finished()
+        # ---- Mimir patch (Continuum TTL 移植): 工具调用边界 pin-on-finish ----
+        # 先让 estimator 解析本步输出（设 this_func_call / is_last_step），
+        # 再据其决策是否挂 TTL pin：非 mimir 或末步 → 正常释放；否则 pin 住 KV，
+        # 不在此处释放——留给同一 job 的下一步复用、免重 prefill。TTL 到期由
+        # unpin_requests_regular 在后续 schedule 里清理。
+        if self.policy == SchedulingPolicy.MIMIR and self.tool_call_estimator \
+                is not None and getattr(request, "job_id", None) is not None:
+            try:
+                self.tool_call_estimator.request_finished(request)
+            except Exception:
+                pass
+            if self.continuum_recorder is not None:
+                self.continuum_recorder.request_finished(request)
+            # 末步（[FINAL: ...] 或 adapter 标记）→ 正常释放，不 pin
+            if not request.is_last_step:
+                # 先清掉同 job 的旧 pin（避免累积，只保留最新一步的 pin）
+                self._unpin_job(request.job_id)
+                length_of_pin = self.tool_call_estimator.set_up_pin(request)
+                if length_of_pin is not None and length_of_pin > 0.01:
+                    self.pin_request(request, length_of_pin)
+                    # pin 住：不从 kv_cache_manager 释放、暂留 self.requests
+                    # （pin 到期由 unpin_requests_regular → kv_cache_manager.free）
+                    return
+        # ---- vanilla 路径（非 mimir / 无 job_id / 末步 / 不 pin）----
+        # 程序末步：同 job 任何历史 pin 都不再有用（该 agent 不会回来）→ 释放其 KV。
+        if self.policy == SchedulingPolicy.MIMIR \
+                and getattr(request, "is_last_step", None) \
+                and getattr(request, "job_id", None) is not None:
+            for p_req, _end in list(self.pinned_requests):
+                if p_req.job_id == request.job_id:
+                    self.unpin_request(p_req, _end)
+                    self.kv_cache_manager.free(p_req)
+                    self.requests.pop(p_req.request_id, None)
         self.kv_cache_manager.free(request)
-        del self.requests[request.request_id]
-        # ---- Mimir patch (Phase L) 已删除：原 mimir 策略下自驱动回收已完成任务 KV ----
-        # （mimir_finish_task），属已废弃的 lifecycle 主动回收，已彻底移除。
+        self.requests.pop(request.request_id, None)
+
+    # ---- Mimir patch (Continuum TTL 移植): pin/unpin 方法 ----
+    def pin_request(self, request: Request, length_of_pin: float) -> None:
+        """挂 TTL pin：记录 (request, 到期时间)，job_id 纳入 pinned_job_ids。"""
+        if self.continuum_recorder is not None:
+            self.continuum_recorder.request_pinned(request)
+        self.pinned_requests.append((request, time.time() + length_of_pin))
+        if request.job_id is not None:
+            self.pinned_job_ids.add(request.job_id)
+
+    def unpin_request(self, request: Request, end_time: float) -> None:
+        """撤销指定 pin（调用方保证 (request, end_time) 在 pinned_requests 中）。"""
+        if (request, end_time) in self.pinned_requests:
+            self.pinned_requests.remove((request, end_time))
+        if self.continuum_recorder is not None:
+            self.continuum_recorder.request_unpinned(request)
+        # 若该 job 已无任何 pin，从 pinned_job_ids 移除
+        if request.job_id is not None and not any(
+                r.job_id == request.job_id for r, _ in self.pinned_requests):
+            self.pinned_job_ids.discard(request.job_id)
+
+    def _unpin_job(self, job_id: Optional[str]) -> None:
+        """撤销某 job 所有现存 pin（pin-on-finish 时清旧 pin 用）。"""
+        if job_id is None:
+            return
+        for req, end_time in list(self.pinned_requests):
+            if req.job_id == job_id:
+                self.unpin_request(req, end_time)
+
+    def unpin_requests_regular(self) -> None:
+        """每步 schedule 开头调：释放 TTL 已到期且同 job 下一步未在 waiting 中的 pin。
+
+        TTL 到期但下一步已在 waiting 队列里 → 不释放（下一步马上要用，留着）。
+        """
+        if self.policy != SchedulingPolicy.MIMIR:
+            return
+        now = time.time()
+        waiting_job_ids = {getattr(r, "job_id", None) for r in self.waiting}
+        for req, end_time in list(self.pinned_requests):
+            if now > end_time and getattr(req, "job_id", None) not in waiting_job_ids:
+                self.unpin_request(req, end_time)
+                # 真正释放 KV + 从 self.requests 移除
+                self.kv_cache_manager.free(req)
+                self.requests.pop(req.request_id, None)
+                if self.continuum_recorder is not None:
+                    self.continuum_recorder.request_evicted_from_running_queue(req)
+
+    def pop_running_request_based_on_last_step(
+        self, request: Request
+    ) -> Optional[tuple[Request, float]]:
+        """死锁兜底：显存被 pin 占满、running 空时，挑一个 pinned req 驱逐让出显存。
+
+        策略与 Continuum 一致：挑 end_time 最大（最晚到期）的 pin 驱逐——它最不可能
+        在近期被复用。返回被驱逐的 (req, end_time)。
+        """
+        if not self.pinned_requests:
+            return None
+        victim = max(self.pinned_requests, key=lambda x: x[1])
+        self.unpin_request(victim[0], victim[1])
+        return victim
+    # ---- Mimir patch end ----
 
     def get_num_unfinished_requests(self) -> int:
         return len(self.waiting) + len(self.running)

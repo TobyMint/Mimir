@@ -227,15 +227,88 @@ def create_request_queue(policy: SchedulingPolicy) -> RequestQueue:
         raise ValueError(f"Unknown scheduling policy: {policy}")
 
 
-# ---- Mimir in-tree patch (Phase G): 'mimir' 调度策略 ----------------------- #
+# ---- Mimir in-tree patch (Phase G + Continuum TTL 移植): mimir 调度策略 --- #
 class MimirRequestQueue(FCFSRequestQueue):
-    """Mimir 调度队列：FCFS 顺序（agent 内存语义不变调度顺序），但标识 Mimir 策略。
+    """Mimir 调度队列：Continuum 风格的 program-level FCFS + pinned-job 优先。
 
-    Mimir 的差异化在内存层（Phase C 生命周期回收 / D CoW / E pin），而非调度顺序。
-    本队列与 FCFS 等价，但通过 SchedulingPolicy.MIMIR 触发引擎日志标识 +
-    与 Mimir 内存管线协同（manager.py 调 set_current_task/finish_task）。
-    区别于 Continuum（Continuum 用独立 ContinuumRequestQueue 做轮转调度）。
+    逻辑移植自 Continuum 的 ContinuumRequestQueue（arXiv 2511.02230）：
+    - 先看队列里有没有 job 在当前 pinned 集合中（被 TTL pin 着、下一步会复用 KV），
+      有则在该批 pinned-job 中选最早入队的优先调度，让"快回来"的请求插队保连续性；
+    - 否则退化为 job-level FCFS（按 job_id 首次入队时间出队）。
+    pinned 集合由 scheduler 在起引擎时经 ``set_pinned_job_ids`` 注入一个可变的 set 引用。
+
+    与 Continuum 原版的区别：原版 peek/pop 带 ``pinned_requests`` 参数、由 scheduler
+    在 CONTINUUM 分支显式传参；Mimir 把 pinned 集合挂在队列上、peek/pop 保持无参签名，
+    避免改动 schedule loop 中大量 peek/pop 调用点。
     """
 
-    pass
+    def __init__(self) -> None:
+        super().__init__()
+        # job_id -> 首次入队时间（program-level FCFS 排序键）
+        self.job_id_first_entry_time: dict[str, float] = {}
+        # scheduler 注入的可变 pinned job_id 集合引用（默认空——无 pin 时退化为纯 FCFS）
+        self.pinned_job_ids: set[str] = set()
+
+    def set_pinned_job_ids(self, pinned: set[str]) -> None:
+        """scheduler 在 __init__ 时注入自身 pinned_requests 对应的 job_id 集合引用。"""
+        self.pinned_job_ids = pinned
+
+    def add_request(self, request: Request) -> None:
+        if request.job_id is not None and request.job_id not in self.job_id_first_entry_time:
+            self.job_id_first_entry_time[request.job_id] = request.arrival_time
+        self.append(request)
+
+    def prepend_request(self, request: Request) -> None:
+        if request.job_id is not None and request.job_id not in self.job_id_first_entry_time:
+            self.job_id_first_entry_time[request.job_id] = request.arrival_time
+        self.appendleft(request)
+
+    def prepend_requests(self, requests: RequestQueue) -> None:
+        for request in requests:
+            jid = getattr(request, "job_id", None)
+            if jid is not None and jid not in self.job_id_first_entry_time:
+                self.job_id_first_entry_time[jid] = request.arrival_time
+        self.extendleft(reversed(requests))
+
+    def peek_request(self) -> Request:
+        if not self:
+            raise IndexError("peek from an empty queue")
+        return self._select()
+
+    def pop_request(self) -> Request:
+        if not self:
+            raise IndexError("pop from an empty queue")
+        request = self._select()
+        self.remove(request)
+        return request
+
+    def _select(self) -> Request:
+        """Continuum 选择策略:pinned-job 优先 → 否则 job-level FCFS。"""
+        # 1) 队列里有 job 在 pinned 集合中? 选其中最早入队的
+        earliest_request: Request | None = None
+        earliest_entry_time = float("inf")
+        for request in self:
+            jid = getattr(request, "job_id", None)
+            if jid is not None and jid in self.pinned_job_ids:
+                job_entry_time = self.job_id_first_entry_time.get(
+                    jid, request.arrival_time)
+                if job_entry_time < earliest_entry_time:
+                    earliest_entry_time = job_entry_time
+                    earliest_request = request
+        if earliest_request is not None:
+            return earliest_request
+
+        # 2) 否则 job-level FCFS:最早首次入队的 job 的请求
+        earliest_request = None
+        earliest_entry_time = float("inf")
+        for request in self:
+            jid = getattr(request, "job_id", None)
+            job_entry_time = (self.job_id_first_entry_time.get(jid, request.arrival_time)
+                              if jid is not None else request.arrival_time)
+            if job_entry_time < earliest_entry_time:
+                earliest_entry_time = job_entry_time
+                earliest_request = request
+        # earliest_request 必非空(队列非空已在校验)
+        assert earliest_request is not None
+        return earliest_request
 # ---- Mimir patch end ------------------------------------------------------ #

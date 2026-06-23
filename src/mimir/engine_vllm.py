@@ -206,10 +206,20 @@ class VLLMEngine:
                 return None
         return None
 
-    def _make_sp(self, max_tokens: int, temperature: float) -> Any:
+    def _make_sp(
+        self, max_tokens: int, temperature: float, extra: dict | None = None
+    ) -> Any:
         from vllm import SamplingParams
 
-        return SamplingParams(temperature=temperature, max_tokens=max_tokens, seed=self.config.seed)
+        sp = SamplingParams(
+            temperature=temperature, max_tokens=max_tokens, seed=self.config.seed
+        )
+        # extra_args 是 vanilla vLLM 0.10.2 自带字段；Mimir 用它把 agent 多轮程序
+        # 元数据（job_id/this_func_call/is_last_step）搭便车送进 Request，
+        # 供「工具调用边界 TTL 保留」（移植自 Continuum）决策。
+        if extra is not None and self.config.extra.get("scheduling_policy") == "mimir":
+            sp.extra_args = extra
+        return sp
 
     def chat(
         self,
