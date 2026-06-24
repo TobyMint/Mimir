@@ -1,0 +1,29 @@
+{
+  "title": "SharedStorageConnector reload A/B (native 重 prefill vs +SSC reload)",
+  "date": "2026-06-24",
+  "model": "Qwen3-4B-Instruct-2507",
+  "gpu": "single RTX 3090, GPU3, util=0.55 (KV pool ~28K tokens)",
+  "load": {"steps": 4, "ctx": 4000, "intf_n": 20, "intf_ctx": 4000, "intf_maxtok": 1024,
+           "note": "步间注入干扰挤掉 agent KV(drain 后,agent 前缀被 LRU 淘汰不可逆),再跑下一步"},
+  "native": {
+    "step1_ttft_ms": 530.7, "step2_ttft_ms": 530.2, "step2_cached": 0,
+    "step2_new_prefill": 4027, "total_new_prefill": 16108,
+    "note": "无 connector,agent KV 被挤掉后每步全量重 prefill"
+  },
+  "mimir_ssc": {
+    "step1_ttft_ms": 1059.5, "step2_ttft_ms": 241.8, "step2_cached": 4016,
+    "step2_new_prefill": 11, "total_new_prefill": 4060,
+    "note": "vLLM 原生 SharedStorageConnector(store 到 /dev/shm tmpfs);step1 store,step2+ reload 命中 4016/4027 token"
+  },
+  "result": {
+    "ttft_improvement": "530ms -> 242ms (-54%)",
+    "new_prefill_reduction": "4027 -> 11 tokens (-99.7%)",
+    "note": "agent 多步场景:step1 全 prefill(+store),step2+ reload 命中免重算。native 每步全重 prefill。"
+  },
+  "honest_boundary": {
+    "connector": "vLLM 自带 SharedStorageConnector(debug 实现,prompt[:-1] 精确匹配命中;patch 了并发下 load-count assert)",
+    "store": "/dev/shm tmpfs(CPU 内存盘),非 LMCache(local-CPU 原始张量)/CacheGen(压缩 serde)——三篇 connector 在 vLLM 0.10.2 + InprocClient 设置下 hash/store 不兼容,改用原生 SSC 跑通 reload 收益",
+    "scope": "完全相同 prompt 每步重复(SSC 命中要求);真实 agent 多步 prompt 增长需更鲁棒的前缀命中 connector",
+    "patch": "third_party/vllm/.../shared_storage_connector.py: 放宽 load-count assert(debug 实现并发压测下 mismatch)"
+  }
+}
