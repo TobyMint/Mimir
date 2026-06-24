@@ -195,9 +195,9 @@ def test_pin_and_unpin_track_job_ids():
     s.pin_request(r, 2.0)
     assert len(s.pinned_requests) == 1
     assert "A" in s.pinned_job_ids
-    # unpin
-    end_time = s.pinned_requests[0][1]
-    s.unpin_request(r, end_time)
+    # unpin(2-tuple: request, end_time)
+    req, end_time, _b = s.pinned_requests[0]
+    s.unpin_request(req, end_time, _b)
     assert len(s.pinned_requests) == 0
     assert "A" not in s.pinned_job_ids
 

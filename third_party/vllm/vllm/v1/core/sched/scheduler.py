@@ -143,7 +143,7 @@ class Scheduler(SchedulerInterface):
         # pinned_job_ids: 当前被 pin 的 job_id 集合（注入给 MimirRequestQueue 做 pin 优先调度）。
         # tool_call_estimator: 工具调用执行时间在线学习 + set_up_pin 决策 TTL。
         # continuum_recorder: 调度事件离线记录（移植自 Continuum）。
-        self.pinned_requests: list[tuple[Request, float]] = []
+        self.pinned_requests: list[tuple[Request, float, list]] = []
         self.pinned_job_ids: set[str] = set()
         self.tool_call_estimator: Optional[ToolCallEstimator] = None
         self.continuum_recorder: Optional[Continuum_Recorder] = None
@@ -1243,54 +1243,85 @@ class Scheduler(SchedulerInterface):
                 self.continuum_recorder.request_finished(request)
             # 末步（[FINAL: ...] 或 adapter 标记）→ 正常释放，不 pin
             if not request.is_last_step:
-                # 先清掉同 job 的旧 pin（避免累积，只保留最新一步的 pin）
+                # 先清掉同 job 的旧 pin(避免累积,只保留最新一步的 pin)
                 self._unpin_job(request.job_id)
                 length_of_pin = self.tool_call_estimator.set_up_pin(request)
                 if length_of_pin is not None and length_of_pin > 0.01:
                     self.pin_request(request, length_of_pin)
-                    # pin 住：不从 kv_cache_manager 释放、暂留 self.requests
-                    # （pin 到期由 unpin_requests_regular → kv_cache_manager.free）
+                    # 思路 I:touch 已保住 block(ref_cnt+1、移出 free queue),
+                    # 每步 unpin_requests_regular 持续 touch 保活。只清 self.requests[rid],
+                    # 下一步新 rid 进来走 APC new-request 分支(不撞 assert),
+                    # 命中 block(hash 仍在 radix tree)→ 免重 prefill。
+                    self.requests.pop(request.request_id, None)
                     return
         # ---- vanilla 路径（非 mimir / 无 job_id / 末步 / 不 pin）----
         # 程序末步：同 job 任何历史 pin 都不再有用（该 agent 不会回来）→ 释放其 KV。
         if self.policy == SchedulingPolicy.MIMIR \
                 and getattr(request, "is_last_step", None) \
                 and getattr(request, "job_id", None) is not None:
-            for p_req, _end in list(self.pinned_requests):
+            for p_req, _end, _blocks in list(self.pinned_requests):
                 if p_req.job_id == request.job_id:
-                    self.unpin_request(p_req, _end)
-                    self.kv_cache_manager.free(p_req)
+                    self.unpin_request(p_req, _end, _blocks)
                     self.requests.pop(p_req.request_id, None)
         self.kv_cache_manager.free(request)
         self.requests.pop(request.request_id, None)
 
     # ---- Mimir patch (Continuum TTL 移植): pin/unpin 方法 ----
+    # 思路 B(scheduler 层管 free,不碰 block 内部状态):pin 时不调 kv_cache_manager.free
+    # (block 物理不动、ref_cnt 不碰),只清 self.requests[rid](下一步新 rid 走 APC new-request
+    # 分支,不撞 assert)。pin 到期 / 末步时才真正 free(block 释放)。这是 Continuum 原版思路
+    # (scheduler 层管 free 动作)+ 最小适配(InprocClient 下清 rid 追踪避免 assert)。
     def pin_request(self, request: Request, length_of_pin: float) -> None:
-        """挂 TTL pin：记录 (request, 到期时间)，job_id 纳入 pinned_job_ids。"""
+        """挂 TTL pin:用 vLLM 原生 touch 保住 block(每步 schedule 开头重新 touch 保活)。
+
+        思路 I(持续 touch 保活):pin 时用 block_pool.touch 把 block ref_cnt+1、移出
+        free_block_queue;每步 schedule 开头对 TTL 未到期的 pin block 重新 touch,
+        确保 pin 期内 block 不被 LRU 淘汰。touch 是 vLLM 原生 API(维护 ref_cnt/
+        free_queue 不变式),比手动改 ref_cnt 安全。
+        """
         if self.continuum_recorder is not None:
             self.continuum_recorder.request_pinned(request)
-        self.pinned_requests.append((request, time.time() + length_of_pin))
+        pinned_blocks = []
+        try:
+            kv_blocks = self.kv_cache_manager.get_blocks(request.request_id)
+            for group in kv_blocks.blocks:
+                for blk in group:
+                    pinned_blocks.append(blk)
+            # 用 vLLM 原生 touch:ref_cnt+1 + 移出 free_block_queue(若在)
+            self.kv_cache_manager.block_pool.touch(kv_blocks.blocks)
+        except Exception:
+            pass
+        self.pinned_requests.append((request, time.time() + length_of_pin, pinned_blocks))
         if request.job_id is not None:
             self.pinned_job_ids.add(request.job_id)
 
-    def unpin_request(self, request: Request, end_time: float) -> None:
-        """撤销指定 pin（调用方保证 (request, end_time) 在 pinned_requests 中）。"""
-        if (request, end_time) in self.pinned_requests:
-            self.pinned_requests.remove((request, end_time))
+    def unpin_request(self, request: Request, end_time: float, pinned_blocks: list) -> None:
+        """撤销指定 pin:free_blocks 释放 block(ref_cnt-1、归零进 free queue)。"""
+        if (request, end_time, pinned_blocks) in self.pinned_requests:
+            self.pinned_requests.remove((request, end_time, pinned_blocks))
         if self.continuum_recorder is not None:
             self.continuum_recorder.request_unpinned(request)
-        # 若该 job 已无任何 pin，从 pinned_job_ids 移除
+        # 释放 block(free_blocks: ref_cnt-1,归零的进 free_block_queue)
+        try:
+            self.kv_cache_manager.block_pool.free_blocks(pinned_blocks)
+        except Exception:
+            pass
+        # 清 req_to_blocks / num_cached_block(此时才清,之前一直留着)
+        try:
+            self.kv_cache_manager.free(request)
+        except Exception:
+            pass
         if request.job_id is not None and not any(
-                r.job_id == request.job_id for r, _ in self.pinned_requests):
+                r.job_id == request.job_id for r, _, _ in self.pinned_requests):
             self.pinned_job_ids.discard(request.job_id)
 
     def _unpin_job(self, job_id: Optional[str]) -> None:
-        """撤销某 job 所有现存 pin（pin-on-finish 时清旧 pin 用）。"""
+        """撤销某 job 所有现存 pin(pin-on-finish 时清旧 pin 用)。"""
         if job_id is None:
             return
-        for req, end_time in list(self.pinned_requests):
+        for req, end_time, blocks in list(self.pinned_requests):
             if req.job_id == job_id:
-                self.unpin_request(req, end_time)
+                self.unpin_request(req, end_time, blocks)
 
     def unpin_requests_regular(self) -> None:
         """每步 schedule 开头调：释放 TTL 已到期且同 job 下一步未在 waiting 中的 pin。
@@ -1301,9 +1332,17 @@ class Scheduler(SchedulerInterface):
             return
         now = time.time()
         waiting_job_ids = {getattr(r, "job_id", None) for r in self.waiting}
-        for req, end_time in list(self.pinned_requests):
+        for req, end_time, blocks in list(self.pinned_requests):
             if now > end_time and getattr(req, "job_id", None) not in waiting_job_ids:
-                self.unpin_request(req, end_time)
+                self.unpin_request(req, end_time, blocks)
+            else:
+                # 持续 touch 保活:TTL 未到期的 pin block 每步重新 touch,
+                # 让它始终 ref_cnt>0、不在 free_block_queue、不被 LRU 淘汰
+                try:
+                    if blocks:
+                        self.kv_cache_manager.block_pool.touch((blocks,))
+                except Exception:
+                    pass
                 # 真正释放 KV + 从 self.requests 移除
                 self.kv_cache_manager.free(req)
                 self.requests.pop(req.request_id, None)
@@ -1321,7 +1360,7 @@ class Scheduler(SchedulerInterface):
         if not self.pinned_requests:
             return None
         victim = max(self.pinned_requests, key=lambda x: x[1])
-        self.unpin_request(victim[0], victim[1])
+        self.unpin_request(victim[0], victim[1], victim[2])
         return victim
     # ---- Mimir patch end ----
 

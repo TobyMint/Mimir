@@ -1,0 +1,31 @@
+{
+  "title": "三档对照:native 重 prefill / SSC reload / Continuum pin(touch 保活)",
+  "date": "2026-06-24",
+  "model": "Qwen3-4B-Instruct-2507",
+  "gpu": "single RTX 3090, GPU3, util=0.55 (KV pool ~28K tokens)",
+  "load": {"steps": 4, "ctx": 4000, "intf_n": 20, "intf_ctx": 4000, "intf_maxtok": 1024,
+           "note": "步间注入干扰挤显存,验证各档在 KV 被挤出后的处理"},
+  "native": {
+    "step2_ttft_ms": 530, "step2_cached": 0, "step2_new_prefill": 4027,
+    "note": "无 pin 无 SSC,KV 被挤掉后全量重 prefill"
+  },
+  "ssc_reload": {
+    "step2_ttft_ms": 242, "step2_cached": 4016, "step2_new_prefill": 11,
+    "note": "vLLM 原生 SharedStorageConnector,KV offload 到 tmpfs 后 reload"
+  },
+  "continuum_pin": {
+    "step2_ttft_ms": 34.3, "step2_cached": 4032, "step2_new_prefill": 13,
+    "step1_pinned": 1, "step2_pinned": 0,
+    "note": "Continuum TTL pin + vLLM 原生 touch 保活;pin 期 block 不被淘汰,step2 直接命中(零拷贝)"
+  },
+  "result": {
+    "three_tier": "native 530ms → SSC reload 242ms → Continuum pin 34.3ms",
+    "pin_vs_native": "530ms → 34.3ms (-93.5%, 15× faster)",
+    "pin_vs_ssc": "242ms → 34.3ms (-85.8%, 7× faster)",
+    "mechanism": "pin(touch keepalive) > SSC reload(CPU→GPU) > native(全重 prefill)"
+  },
+  "honest_boundary": {
+    "pin_mechanism": "vLLM 原生 block_pool.touch 持续保活(每步 schedule 重新 touch TTL 未到期的 pin block,ref_cnt+1、移出 free_block_queue)。touch 是 vLLM 原生 API(维护 ref_cnt/free_queue 不变式),非手动改 ref_cnt(之前手动改 ref_cnt 压力下崩)",
+    "scope": "agent 跨步共享前缀(同 job_id、prompt 前缀复用);TTL 期内 pin 保住 KV,step2 直接命中"
+  }
+}
