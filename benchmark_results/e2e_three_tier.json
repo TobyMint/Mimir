@@ -9,7 +9,7 @@
     "intf_maxtok": 512,
     "util": 0.55,
     "seed": 42,
-    "modes": "native,pin,ssc",
+    "modes": "native,pin,ssc,pinsc",
     "out_dir": "benchmark_results"
   },
   "results": {
@@ -18,10 +18,10 @@
       "n_agents": 8,
       "rounds": 10,
       "util": 0.55,
-      "total_time_s": 222.0,
-      "mean_ttft_ms": 1476.8,
-      "median_ttft_ms": 1624.5,
-      "p90_ttft_ms": 1983.0,
+      "total_time_s": 224.4,
+      "mean_ttft_ms": 1476.2,
+      "median_ttft_ms": 1622.1,
+      "p90_ttft_ms": 1981.1,
       "total_new_prefill_tokens": 158893,
       "total_cached_tokens": 0,
       "hit_ratio": 0.0,
@@ -32,14 +32,14 @@
           "id": 0,
           "done": false,
           "steps": 10,
-          "mean_ttft": 1005.2,
+          "mean_ttft": 1005.3,
           "total_new_prefill": 19877
         },
         {
           "id": 1,
           "done": false,
           "steps": 10,
-          "mean_ttft": 997.9,
+          "mean_ttft": 998.1,
           "total_new_prefill": 19859
         },
         {
@@ -53,35 +53,35 @@
           "id": 3,
           "done": false,
           "steps": 10,
-          "mean_ttft": 1378.2,
+          "mean_ttft": 1377.7,
           "total_new_prefill": 19848
         },
         {
           "id": 4,
           "done": false,
           "steps": 10,
-          "mean_ttft": 1853.3,
+          "mean_ttft": 1852.3,
           "total_new_prefill": 19877
         },
         {
           "id": 5,
           "done": false,
           "steps": 10,
-          "mean_ttft": 1846.8,
+          "mean_ttft": 1845.8,
           "total_new_prefill": 19859
         },
         {
           "id": 6,
           "done": false,
           "steps": 10,
-          "mean_ttft": 1840.4,
+          "mean_ttft": 1839.3,
           "total_new_prefill": 19877
         },
         {
           "id": 7,
           "done": false,
           "steps": 10,
-          "mean_ttft": 1901.2,
+          "mean_ttft": 1899.8,
           "total_new_prefill": 19848
         }
       ]
@@ -91,10 +91,10 @@
       "n_agents": 8,
       "rounds": 10,
       "util": 0.55,
-      "total_time_s": 271.1,
-      "mean_ttft_ms": 444.2,
-      "median_ttft_ms": 390.4,
-      "p90_ttft_ms": 970.6,
+      "total_time_s": 271.5,
+      "mean_ttft_ms": 443.6,
+      "median_ttft_ms": 391.9,
+      "p90_ttft_ms": 964.7,
       "total_new_prefill_tokens": 34477,
       "total_cached_tokens": 124416,
       "hit_ratio": 0.783,
@@ -105,56 +105,56 @@
           "id": 0,
           "done": false,
           "steps": 10,
-          "mean_ttft": 435.5,
+          "mean_ttft": 434.8,
           "total_new_prefill": 4325
         },
         {
           "id": 1,
           "done": false,
           "steps": 10,
-          "mean_ttft": 427.8,
+          "mean_ttft": 427.1,
           "total_new_prefill": 4307
         },
         {
           "id": 2,
           "done": false,
           "steps": 10,
-          "mean_ttft": 420.7,
+          "mean_ttft": 420.1,
           "total_new_prefill": 4296
         },
         {
           "id": 3,
           "done": false,
           "steps": 10,
-          "mean_ttft": 413.8,
+          "mean_ttft": 413.2,
           "total_new_prefill": 4296
         },
         {
           "id": 4,
           "done": false,
           "steps": 10,
-          "mean_ttft": 473.9,
+          "mean_ttft": 473.3,
           "total_new_prefill": 4325
         },
         {
           "id": 5,
           "done": false,
           "steps": 10,
-          "mean_ttft": 467.2,
+          "mean_ttft": 466.7,
           "total_new_prefill": 4307
         },
         {
           "id": 6,
           "done": false,
           "steps": 10,
-          "mean_ttft": 460.5,
+          "mean_ttft": 460.1,
           "total_new_prefill": 4325
         },
         {
           "id": 7,
           "done": false,
           "steps": 10,
-          "mean_ttft": 453.8,
+          "mean_ttft": 453.5,
           "total_new_prefill": 4296
         }
       ]
@@ -164,71 +164,144 @@
       "n_agents": 8,
       "rounds": 10,
       "util": 0.55,
-      "total_time_s": 264.5,
-      "mean_ttft_ms": 2627.3,
-      "median_ttft_ms": 2968.8,
-      "p90_ttft_ms": 3518.4,
-      "total_new_prefill_tokens": 158893,
-      "total_cached_tokens": 0,
-      "hit_ratio": 0.0,
-      "n_steps_total": 80,
-      "n_agents_done": 0,
+      "total_time_s": 426.4,
+      "mean_ttft_ms": 1445.3,
+      "median_ttft_ms": 1485.9,
+      "p90_ttft_ms": 3450.7,
+      "total_new_prefill_tokens": 15534,
+      "total_cached_tokens": 56272,
+      "hit_ratio": 0.784,
+      "n_steps_total": 39,
+      "n_agents_done": 7,
       "agents_detail": [
         {
           "id": 0,
           "done": false,
           "steps": 10,
-          "mean_ttft": 1811.5,
-          "total_new_prefill": 19877
+          "mean_ttft": 853.6,
+          "total_new_prefill": 2357
         },
         {
           "id": 1,
-          "done": false,
-          "steps": 10,
-          "mean_ttft": 1804.3,
-          "total_new_prefill": 19859
+          "done": true,
+          "steps": 3,
+          "mean_ttft": 1733.3,
+          "total_new_prefill": 1795
         },
         {
           "id": 2,
+          "done": true,
+          "steps": 4,
+          "mean_ttft": 1569.0,
+          "total_new_prefill": 1906
+        },
+        {
+          "id": 3,
+          "done": true,
+          "steps": 3,
+          "mean_ttft": 1719.3,
+          "total_new_prefill": 1791
+        },
+        {
+          "id": 4,
+          "done": true,
+          "steps": 5,
+          "mean_ttft": 1639.9,
+          "total_new_prefill": 1996
+        },
+        {
+          "id": 5,
+          "done": true,
+          "steps": 3,
+          "mean_ttft": 2156.7,
+          "total_new_prefill": 1795
+        },
+        {
+          "id": 6,
+          "done": true,
+          "steps": 4,
+          "mean_ttft": 1885.1,
+          "total_new_prefill": 1917
+        },
+        {
+          "id": 7,
+          "done": true,
+          "steps": 7,
+          "mean_ttft": 1283.5,
+          "total_new_prefill": 1977
+        }
+      ]
+    },
+    "pinsc": {
+      "mode": "pinsc",
+      "n_agents": 8,
+      "rounds": 10,
+      "util": 0.55,
+      "total_time_s": 204.6,
+      "mean_ttft_ms": 1198.4,
+      "median_ttft_ms": 1126.1,
+      "p90_ttft_ms": 1656.2,
+      "total_new_prefill_tokens": 3065,
+      "total_cached_tokens": 92464,
+      "hit_ratio": 0.968,
+      "n_steps_total": 49,
+      "n_agents_done": 5,
+      "agents_detail": [
+        {
+          "id": 0,
           "done": false,
           "steps": 10,
-          "mean_ttft": 1797.6,
-          "total_new_prefill": 19848
+          "mean_ttft": 1105.2,
+          "total_new_prefill": 688
+        },
+        {
+          "id": 1,
+          "done": true,
+          "steps": 2,
+          "mean_ttft": 1652.2,
+          "total_new_prefill": 90
+        },
+        {
+          "id": 2,
+          "done": true,
+          "steps": 3,
+          "mean_ttft": 1509.7,
+          "total_new_prefill": 162
         },
         {
           "id": 3,
           "done": false,
           "steps": 10,
-          "mean_ttft": 2478.9,
-          "total_new_prefill": 19848
+          "mean_ttft": 1094.2,
+          "total_new_prefill": 686
         },
         {
           "id": 4,
-          "done": false,
-          "steps": 10,
-          "mean_ttft": 3274.5,
-          "total_new_prefill": 19877
+          "done": true,
+          "steps": 4,
+          "mean_ttft": 1387.6,
+          "total_new_prefill": 252
         },
         {
           "id": 5,
-          "done": false,
-          "steps": 10,
-          "mean_ttft": 3268.1,
-          "total_new_prefill": 19859
+          "done": true,
+          "steps": 2,
+          "mean_ttft": 1628.1,
+          "total_new_prefill": 90
         },
         {
           "id": 6,
           "done": false,
           "steps": 10,
-          "mean_ttft": 3261.7,
-          "total_new_prefill": 19877
+          "mean_ttft": 1083.7,
+          "total_new_prefill": 606
         },
         {
           "id": 7,
-          "done": false,
-          "steps": 10,
-          "mean_ttft": 3321.4,
-          "total_new_prefill": 19848
+          "done": true,
+          "steps": 8,
+          "mean_ttft": 1156.5,
+          "total_new_prefill": 491
         }
       ]
     }

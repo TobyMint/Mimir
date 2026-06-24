@@ -42,8 +42,16 @@ from mimir.engine_vllm import EngineConfig
 from mimir.engine_vllm_v1 import VLLMEngineV1
 
 extra = {"max_model_len": 8192}
-if mode == "pin":
+if mode in ("pin", "pinsc"):
     extra["scheduling_policy"] = "mimir"
+    if mode == "pinsc":
+        store_path = "/dev/shm/ssc_e2e"
+        os.makedirs(store_path, exist_ok=True)
+        extra["kv_transfer_config"] = {
+            "kv_connector": "SharedStorageConnector",
+            "kv_role": "kv_both",
+            "kv_connector_extra_config": {"shared_storage_path": store_path},
+        }
 elif mode == "ssc":
     extra["scheduling_policy"] = "fcfs"
     store_path = "/dev/shm/ssc_e2e"
@@ -117,7 +125,7 @@ for rnd in range(ROUNDS):
         break
     for i, a in pending:
         sp = SamplingParams(temperature=0.0, max_tokens=48, seed=SEED)
-        if mode == "pin":
+        if mode in ("pin", "pinsc"):
             sp.extra_args = {"job_id": a["job_id"]}
         rid = f"agent_{i}_r{rnd}"
         try:

@@ -83,6 +83,8 @@ class SharedStorageConnector(KVConnectorBase_V1):
         super().__init__(vllm_config=vllm_config, role=role)
         self._block_size = vllm_config.cache_config.block_size
         self._requests_need_load: dict[str, Request] = {}
+        # Mimir patch: 记录每个请求的前缀匹配长度(供 build_connector_meta 截断 token_ids/block_ids)
+        self._request_matched_tokens: dict[str, int] = {}
         transfer_config = vllm_config.kv_transfer_config
         self._storage_path = transfer_config.get_from_extra_config(
             "shared_storage_path", "/tmp")
@@ -174,10 +176,21 @@ class SharedStorageConnector(KVConnectorBase_V1):
 
                 filename = self._generate_filename_debug(
                     layer_name, request.token_ids, request.mm_hashes)
+                # Mimir patch: 容错——文件不存在时跳过该层 load(debug 实现前缀匹配
+                # 有时 hash 不对齐),不崩,该层走正常 prefill
+                if not os.path.exists(filename):
+                    logger.debug("SSC load skip (file not found): %s", filename)
+                    continue
                 kv_cache = safetensors.torch.load_file(
-                    filename)["kv_cache"].cuda()
-                inject_kv_into_layer(kv_cache_layer, kv_cache,
-                                     request.slot_mapping)
+                    filename)["kv_cache"]
+                # 形状不匹配时也跳过(slot_mapping 比 stored KV 大时)
+                try:
+                    kv_cache = kv_cache.cuda()
+                    inject_kv_into_layer(kv_cache_layer, kv_cache,
+                                         request.slot_mapping)
+                except RuntimeError:
+                    logger.debug("SSC load skip (shape mismatch): %s", layer_name)
+                    continue
 
     def wait_for_layer_load(self, layer_name: str) -> None:
         """Blocking until the KV for a specific layer is loaded into vLLM's
@@ -259,15 +272,17 @@ class SharedStorageConnector(KVConnectorBase_V1):
         # NOTE: in current v1 scheduler, the num_computed_tokens is aligned
         # with the block granularity. And it expects the returned blocks and
         # num_computed_tokens to also be aligned with the block granularity.
-        if not self._found_match_for_request(request):
+        # Mimir patch: 前缀匹配(支持 agent 多轮 prompt 增长)
+        matched_tokens = self._find_longest_prefix_match(request)
+        if matched_tokens == 0:
             return 0, False
 
-        logger.info("External Cache Hit!")
+        # 记录匹配长度,供 build_connector_meta 截断 token_ids/block_ids
+        self._request_matched_tokens[request.request_id] = matched_tokens
 
-        # Now, first num_tokens_to_check tokens are hit, we need to prepare
+        # Now, first matched_tokens tokens are hit, we need to prepare
         # the metadata for the worker connector to correctly load the KV
-        num_tokens_to_check = align_to_block_size(
-            len(request.prompt_token_ids) - 1, self._block_size)
+        num_tokens_to_check = matched_tokens
 
         return num_tokens_to_check - num_computed_tokens, False
 
@@ -300,12 +315,29 @@ class SharedStorageConnector(KVConnectorBase_V1):
         total_need_load = 0
         for new_req in scheduler_output.scheduled_new_reqs:
             if new_req.req_id in self._requests_need_load:
-                meta.add_request(token_ids=new_req.prompt_token_ids,
-                                 block_ids=new_req.block_ids[0],
+                # Mimir patch: 前缀匹配——用匹配长度的 token_ids/block_ids 做 LOAD
+                matched = self._request_matched_tokens.get(new_req.req_id, 0)
+                if matched > 0 and matched < len(new_req.prompt_token_ids):
+                    truncated_tokens = new_req.prompt_token_ids[:matched]
+                    num_blocks = matched // self._block_size
+                    truncated_blocks = new_req.block_ids[0][:num_blocks]
+                else:
+                    truncated_tokens = new_req.prompt_token_ids
+                    truncated_blocks = new_req.block_ids[0]
+                meta.add_request(token_ids=truncated_tokens,
+                                 block_ids=truncated_blocks,
                                  block_size=self._block_size,
                                  is_store=False,
                                  mm_hashes=new_req.mm_hashes)
                 total_need_load += 1
+                # Mimir patch: LOAD + STORE 非互斥——前缀匹配(load)时也 store
+                # 完整 prompt(供下一轮前缀匹配)。原版 store/load 互斥致多轮 agent
+                # 中间轮的 KV 不被 store,下一轮找不到前缀匹配。
+                meta.add_request(token_ids=new_req.prompt_token_ids,
+                                 block_ids=new_req.block_ids[0],
+                                 block_size=self._block_size,
+                                 is_store=True,
+                                 mm_hashes=new_req.mm_hashes)
             else:
                 # NOTE: here, we set the store and load being exclusive,
                 # but a single request can have both store and load.
@@ -356,25 +388,37 @@ class SharedStorageConnector(KVConnectorBase_V1):
         # 故只清已被处理的、未处理的保留到下步(不 assert 严格相等)。
         # ---- Mimir patch end ----
         self._requests_need_load.clear()
+        self._request_matched_tokens.clear()
         return meta
 
     # ==============================
     # Helper functions
     # ==============================
 
+    def _find_longest_prefix_match(self, request: "Request") -> int:
+        """Mimir patch: 前缀匹配——从长到短试 prompt 的 block 对齐前缀,
+        返回最长匹配的 token 数(0=未命中)。支持 agent 多轮 prompt 增长场景
+        (上一步 store 了 N token 的 prompt,下一步 prompt=N+新内容,
+        前缀 N 的 hash 能命中)。原版 _found_match_for_request 只查整个 prompt,多轮 miss。
+        """
+        prompt_ids = request.prompt_token_ids
+        max_check = align_to_block_size(len(prompt_ids) - 1, self._block_size)
+        # 从长到短,按 block_size 步长试前缀 hash
+        for num_tokens in range(max_check, 0, -self._block_size):
+            foldername = self._generate_foldername_debug(
+                torch.tensor(prompt_ids)[:num_tokens],
+                request.mm_hashes, create_folder=False)
+            if os.path.exists(foldername):
+                logger.info("External Cache Hit! (prefix match, %d tokens)", num_tokens)
+                return num_tokens
+        return 0
+
     def _found_match_for_request(
         self,
         request: "Request",
     ) -> bool:
-        """Check if the cache is hit for the request.
-        """
-        num_tokens_to_check = align_to_block_size(
-            len(request.prompt_token_ids) - 1, self._block_size)
-        foldername = self._generate_foldername_debug(torch.tensor(
-            request.prompt_token_ids)[:num_tokens_to_check],
-                                                     request.mm_hashes,
-                                                     create_folder=False)
-        return os.path.exists(foldername)
+        """Check if the cache is hit for the request (原版:整个 prompt 精确匹配)。"""
+        return self._find_longest_prefix_match(request) > 0
 
     def _generate_foldername_debug(
         self,
