@@ -206,7 +206,7 @@ print("E2E_RESULT " + json.dumps(summary))
 
 def run_side(gpu, mode, n_agents, rounds, ctx, intf_n, intf_ctx, intf_maxtok, util, seed):
     r = subprocess.run(
-        ["python", "-c", CHILD, str(gpu), mode, str(n_agents), str(rounds),
+        [sys.executable, "-c", CHILD, str(gpu), mode, str(n_agents), str(rounds),
          str(ctx), str(intf_n), str(intf_ctx), str(intf_maxtok), str(util), str(seed)],
         capture_output=True, text=True, env=dict(os.environ), timeout=3600)
     # CHILD print "E2E_RESULT {...}" (空格分隔,无冒号),检查 stdout 和 stderr
