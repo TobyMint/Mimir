@@ -22,6 +22,8 @@ from run_e2e_three_tier import CHILD  # noqa: E402
 
 env = dict(os.environ)
 env["VLLM_LOGGING_LEVEL"] = "INFO"
+env["MIMIR_DEBUG_PIN"] = "1"
+env["MIMIR_DEBUG_SSC"] = "1"
 # 2 agent × 3 round, strong 干扰(8×3000+512), pinsc, util 0.55, seed 42
 r = subprocess.run(
     [sys.executable, "-c", CHILD, "3", "pinsc", "2", "3", "2000", "8", "3000", "512",

@@ -1333,7 +1333,15 @@ class Scheduler(SchedulerInterface):
         now = time.time()
         waiting_job_ids = {getattr(r, "job_id", None) for r in self.waiting}
         for req, end_time, blocks in list(self.pinned_requests):
-            if now > end_time and getattr(req, "job_id", None) not in waiting_job_ids:
+            # Mimir patch: 取消 "job_id not in waiting" 绕过——TTL 真到期即释放,
+            # 即使同 job 下一轮已在 waiting 队列。否则 pin 永不到期(KV 永留 GPU),
+            # SSC 没机会 reload 兜底(pin+SSC 退化为 pin)。pin 到期释放后下一轮请求
+            # computed 降,SSC get_num_new_matched_tokens 返回 >0 触发 reload 兜底。
+            if now > end_time:
+                if __import__('os').environ.get('MIMIR_DEBUG_PIN'):
+                    __import__('sys').stderr.write(
+                        f"[PIN_EXPIRE] job={getattr(req, 'job_id', None)} "
+                        f"age={now - end_time:.2f}s blocks={len(blocks)}\n")
                 self.unpin_request(req, end_time, blocks)
             else:
                 # 持续 touch 保活:TTL 未到期的 pin block 每步重新 touch,

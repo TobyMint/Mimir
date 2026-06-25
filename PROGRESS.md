@@ -142,12 +142,12 @@
 - vLLM 原生 SharedStorageConnector + 前缀匹配补丁：绕开 LMCache hash 黑盒（vLLM 0.10.2 缺 builtin hash），支持 agent 多轮 prompt 增长 + 容错 + 非互斥 store/load。
 - 突破 InprocClient 同步限制：in-process `add_request`+`step` 交错造争用，保父进程可观测（异步 server 下统计在子进程读不到）。
 
-**收益（干扰强度扫描，2026-06-25，`benchmark_results/interference_sweep.{json,png}`）**：
+**收益（干扰强度扫描，2026-06-26，`benchmark_results/interference_sweep.{json,png}`）**：
 - native 命中率随压力退化 90.1%→90.1%→37.5%→0%（none/weak/medium/strong）——反驳"打地板"：无压 native 自命中 90%，0% 是真实压力退化。
 - pin 增量随压力 0→+41%→+78%（weak 零增量→medium +41.1%→strong +78.3%），TTFT 降 70%（KV 留 GPU 免 reload）。pin 不创造命中，只在 native 会丢 KV 时保住它。
-- native+SSC 重压 +78.4% 但 TTFT 没降（reload 读盘+memcpy 开销）；弱压负收益（77.6% < native 90.1%）。
-- pin+SSC 冲突（诊断 `scripts/diag_pinsc.py`：前缀匹配命中 611 次但 Inject KV=0）：pin 保活让 SSC `get_num_new_matched_tokens` 返回 0，SSC 空转。故三步走第三步用 native+SSC（SSC 代替 pin）而非 pin+SSC。
-- **三步走（strong 档）**：native 0%/1470ms/224s → +pin 78.3%/442ms/269s → +native+SSC 78.4%/1457ms/426s。命中率/重算单调提升；TTFT/total 非单调（pin 降 TTFT 但降吞吐、SSC reload 拖累 TTFT）。**pin 是更优单进程方案；SSC 独占价值在跨进程/持久化**（pin 只在进程内）。
+- pin+SSC 兜底：重压 pin TTL 到期释放 KV，SSC reload 兜底，命中率 +9.7%（pin 78.3% → 88%）。弱压 pin 不到期，SSC 负收益（88.1% < native 90.1%）。
+- pin+SSC 初版退化为 pin（SSC 空转，Inject=0），已修：取消 pin `unpin_requests_regular` 的 waiting 绕过（让 TTL 真到期）+ SSC 每轮 store（不只第一轮）。修复后 Inject KV=1728，pin+SSC 78.3% → 88%。
+- **三步走（strong 档）**：native 0%/1470ms/224s → +pin 78.3%/442ms/269s → +pin+SSC 88%/1733ms/984s。命中率/重算单调提升（0→78→88%）；TTFT/total 非单调（pin 最低，pin+SSC 被 reload+store 拖累——memory 兜底慢于 GPU 保活）。**pin（快）+ pin+SSC（全）互补**。
 
 **文档**：`docs/三篇融合技术报告.md`（方法+结果）、`docs/三篇融合评测与边界.md`（评测口径+诚实边界）。
 

@@ -274,6 +274,10 @@ class SharedStorageConnector(KVConnectorBase_V1):
         # num_computed_tokens to also be aligned with the block granularity.
         # Mimir patch: 前缀匹配(支持 agent 多轮 prompt 增长)
         matched_tokens = self._find_longest_prefix_match(request)
+        if __import__('os').environ.get('MIMIR_DEBUG_SSC'):
+            __import__('sys').stderr.write(
+                f"[SSC_MATCH] req={request.request_id} matched={matched_tokens} "
+                f"computed={num_computed_tokens} ret={matched_tokens - num_computed_tokens}\n")
         if matched_tokens == 0:
             return 0, False
 
@@ -339,16 +343,15 @@ class SharedStorageConnector(KVConnectorBase_V1):
                                  is_store=True,
                                  mm_hashes=new_req.mm_hashes)
             else:
-                # NOTE: here, we set the store and load being exclusive,
-                # but a single request can have both store and load.
-                # NOTE(rob): for this debug implementation, we only cache
-                # the original prompt tokens.
-                if not self._found_match_for_request(new_req):
-                    meta.add_request(token_ids=new_req.prompt_token_ids,
-                                     block_ids=new_req.block_ids[0],
-                                     block_size=self._block_size,
-                                     is_store=True,
-                                     mm_hashes=new_req.mm_hashes)
+                # Mimir patch: 总是 store 当前 prompt(不只 found_match=False 时)。
+                # pin 保活时(found_match=True、ret=0、不 load)也要 store,供 pin TTL
+                # 到期释放后 SSC reload 兜底——否则只第一轮 store,pin 到期后 SSC
+                # reload 不了后续轮的新增长,pin+SSC 退化为 pin。
+                meta.add_request(token_ids=new_req.prompt_token_ids,
+                                 block_ids=new_req.block_ids[0],
+                                 block_size=self._block_size,
+                                 is_store=True,
+                                 mm_hashes=new_req.mm_hashes)
 
         cached_reqs = scheduler_output.scheduled_cached_reqs
         for i, req_id in enumerate(cached_reqs.req_ids):

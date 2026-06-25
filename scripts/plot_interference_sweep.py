@@ -18,8 +18,8 @@ os.environ.setdefault("MPLBACKEND", "Agg")  # Agg 后端,须在 import pyplot �
 import matplotlib.pyplot as plt
 
 PROFILES_ORDER = ["none", "weak", "medium", "strong"]
-MODES = ["native", "pin", "ssc"]
-MODE_STYLE = {"native": ("o-", "tab:red"), "pin": ("s-", "tab:blue"), "ssc": ("^-", "tab:green")}
+MODES = ["native", "pin", "pinsc"]
+MODE_STYLE = {"native": ("o-", "tab:red"), "pin": ("s-", "tab:blue"), "pinsc": ("^-", "tab:green")}
 
 
 def main():
