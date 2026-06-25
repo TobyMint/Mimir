@@ -128,3 +128,27 @@
 **当前状态**：108 测试通过，ruff clean，git clean & synced，评分四维全覆盖 + 创新核心（block-class）+ 诚实评测 + 诚实自审。
 
 **下一会话可推进**：llama.cpp 后端、国产硬件真实测试、长上下文生存视频、block-class 在更大模型/真实 agent 框架（如 BFCL/τ-bench）验证。
+
+## 2026-06-24/25 三篇融合（最新方向，supersede block-class 定位）
+
+> 本节为最新方向。早期 block-class/lifecycle 叙事（06-18~06-21）已被三篇融合 supersede，以本节 + `docs/三篇融合技术报告.md` / `评测与边界.md` 为准。定调见 memory `mimir-core-idea-tiered-kv`。
+
+**方向定调**：不自造机制，做 Continuum（何时留/放）+ LMCache（搬去哪）+ CacheGen（怎么压）三篇融合，agent 工具调用场景统一 KV 放置管线。block-class 不再作为夺冠核心（降为三机制之一），对外仍叫 Mimir。
+
+**落地**（commit d9070f3 / 97f882f / 0fe2dc7 / e0b6f73 / de6c5e8 / 3e3ccaf / 985e6b6）：
+- Continuum TTL port 进 `"mimir"` 策略：pin 用 vLLM 原生 `block_pool.touch` 保活（增 ref_cnt + 移出 free queue，不动 ref_cnt 手动增减），13 单测 + 冒烟。
+- LMCache 0.4.7 接入：`lmcache_compat.py` 修 otel LoggerProvider + connector 自注册。
+- CacheGen serde：LMCache 0.4.7 自带编解码，2.88× 压缩验证（`test_cachegen_serde.py`）。
+- vLLM 原生 SharedStorageConnector + 前缀匹配补丁：绕开 LMCache hash 黑盒（vLLM 0.10.2 缺 builtin hash），支持 agent 多轮 prompt 增长 + 容错 + 非互斥 store/load。
+- 突破 InprocClient 同步限制：in-process `add_request`+`step` 交错造争用，保父进程可观测（异步 server 下统计在子进程读不到）。
+
+**收益（干扰强度扫描，2026-06-25，`benchmark_results/interference_sweep.{json,png}`）**：
+- native 命中率随压力退化 90.1%→90.1%→37.5%→0%（none/weak/medium/strong）——反驳"打地板"：无压 native 自命中 90%，0% 是真实压力退化。
+- pin 增量随压力 0→+41%→+78%（weak 零增量→medium +41.1%→strong +78.3%），TTFT 降 70%（KV 留 GPU 免 reload）。pin 不创造命中，只在 native 会丢 KV 时保住它。
+- native+SSC 重压 +78.4% 但 TTFT 没降（reload 读盘+memcpy 开销）；弱压负收益（77.6% < native 90.1%）。
+- pin+SSC 冲突（诊断 `scripts/diag_pinsc.py`：前缀匹配命中 611 次但 Inject KV=0）：pin 保活让 SSC `get_num_new_matched_tokens` 返回 0，SSC 空转。故三步走第三步用 native+SSC（SSC 代替 pin）而非 pin+SSC。
+- **三步走（strong 档）**：native 0%/1470ms/224s → +pin 78.3%/442ms/269s → +native+SSC 78.4%/1457ms/426s。命中率/重算单调提升；TTFT/total 非单调（pin 降 TTFT 但降吞吐、SSC reload 拖累 TTFT）。**pin 是更优单进程方案；SSC 独占价值在跨进程/持久化**（pin 只在进程内）。
+
+**文档**：`docs/三篇融合技术报告.md`（方法+结果）、`docs/三篇融合评测与边界.md`（评测口径+诚实边界）。
+
+**待办**：PROGRESS/RESULTS_SUMMARY 早期 block-class 叙事的全面对齐（当前仅末尾本节 + 三篇融合文档反映最新方向，主体仍为 06-21 状态）；跨进程 SSC 验证独占价值；CacheGen serde 接进 SSC 数据流。
