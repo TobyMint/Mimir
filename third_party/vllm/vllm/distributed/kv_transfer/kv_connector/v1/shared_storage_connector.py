@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 import hashlib
 import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
@@ -90,6 +91,10 @@ class SharedStorageConnector(KVConnectorBase_V1):
             "shared_storage_path", "/tmp")
         logger.info(vllm_config.kv_transfer_config)
         logger.info("Shared storage path is %s", self._storage_path)
+        # Mimir patch: 异步 store 写盘——extract(GPU→CPU copy)同步,写盘(safetensors save_file)
+        # 后台线程不阻塞 forward。store 慢是 pin+SSC total 爆炸的主因(每轮全 prompt×36 层
+        # = 2880 次 save),移到后台让 forward 不等写盘。reload 读文件有容错(文件不存在 skip)。
+        self._store_pool = ThreadPoolExecutor(max_workers=8)
 
     def start_load_kv(self, forward_context: "ForwardContext",
                       **kwargs) -> None:
@@ -242,7 +247,9 @@ class SharedStorageConnector(KVConnectorBase_V1):
                 kv_cache = extract_kv_from_layer(kv_layer,
                                                  request.slot_mapping)
                 tensors = {"kv_cache": kv_cache.detach().cpu()}
-                safetensors.torch.save_file(tensors, filename)
+                # Mimir patch: 异步写盘(extract 同步已完成 GPU→CPU copy,写盘后台不阻塞 forward)
+                self._store_pool.submit(safetensors.torch.save_file, tensors,
+                                        filename)
 
     def wait_for_save(self):
         return
